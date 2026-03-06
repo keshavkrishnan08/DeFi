@@ -1,0 +1,233 @@
+# ============================================================
+# DeFi Liquidation Cascade Predictor — Configuration
+# IEEE TCSS Paper: Temporal GNN for Cross-Protocol Cascades
+# ============================================================
+
+project:
+  name: "defi_cascade_predictor"
+  seed: 42
+  device: "cuda"  # "cuda" or "cpu"
+  output_dir: "outputs"
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  # Date range for data collection
+  start_date: "2021-06-01"
+  end_date: "2026-02-28"
+  data_source: "real"
+  tvl_data_path: "data/real/tvl_combined.csv"
+  # Temporal resolution
+  snapshot_interval_hours: 24  # daily snapshots
+  # Protocols to track
+  protocols:
+    - name: "aave-v3"
+      chain: "ethereum"
+      type: "lending"
+    - name: "aave-v2"
+      chain: "ethereum"
+      type: "lending"
+    - name: "compound-v3"
+      chain: "ethereum"
+      type: "lending"
+    - name: "compound-v2"
+      chain: "ethereum"
+      type: "lending"
+    - name: "makerdao"
+      chain: "ethereum"
+      type: "cdp"
+    - name: "uniswap-v3"
+      chain: "ethereum"
+      type: "dex"
+    - name: "uniswap-v2"
+      chain: "ethereum"
+      type: "dex"
+    - name: "curve-dex"
+      chain: "ethereum"
+      type: "dex"
+    - name: "lido"
+      chain: "ethereum"
+      type: "liquid_staking"
+    - name: "rocket-pool"
+      chain: "ethereum"
+      type: "liquid_staking"
+    - name: "convex-finance"
+      chain: "ethereum"
+      type: "yield"
+    - name: "yearn-finance"
+      chain: "ethereum"
+      type: "yield"
+    - name: "frax"
+      chain: "ethereum"
+      type: "stablecoin"
+    - name: "balancer"
+      chain: "ethereum"
+      type: "dex"
+    - name: "morpho"
+      chain: "ethereum"
+      type: "lending"
+
+  # Known cascade events for labeling
+  cascade_events:
+    - name: "terra_luna_collapse"
+      start: "2022-05-07"
+      peak: "2022-05-12"
+      end: "2022-05-15"
+      severity: "catastrophic"
+      tvl_loss_pct: 0.45
+    - name: "3ac_celsius_contagion"
+      start: "2022-06-12"
+      peak: "2022-06-18"
+      end: "2022-06-25"
+      severity: "severe"
+      tvl_loss_pct: 0.30
+    - name: "ftx_collapse"
+      start: "2022-11-06"
+      peak: "2022-11-11"
+      end: "2022-11-14"
+      severity: "severe"
+      tvl_loss_pct: 0.25
+    - name: "usdc_depeg_svb"
+      start: "2023-03-10"
+      peak: "2023-03-11"
+      end: "2023-03-13"
+      severity: "moderate"
+      tvl_loss_pct: 0.12
+    - name: "euler_hack"
+      start: "2023-03-13"
+      peak: "2023-03-13"
+      end: "2023-03-16"
+      severity: "moderate"
+      tvl_loss_pct: 0.08
+    - name: "curve_exploit"
+      start: "2023-07-30"
+      peak: "2023-07-31"
+      end: "2023-08-02"
+      severity: "moderate"
+      tvl_loss_pct: 0.10
+
+graph:
+  # Node types
+  node_types:
+    - "protocol"
+    - "liquidity_pool"
+    - "token"
+  # Edge types in the composability graph
+  edge_types:
+    - "shared_collateral"      # protocols sharing the same collateral assets
+    - "liquidity_flow"         # capital flowing between protocols
+    - "oracle_dependency"      # protocols sharing price oracle sources
+    - "governance_overlap"     # shared governance token holders
+    - "price_correlation"      # highly correlated token exposures
+    - "liquidation_pathway"    # protocol A liquidation triggers sells on protocol B
+  # Node feature dimensions
+  node_feature_dim: 32
+  edge_feature_dim: 16
+  # Temporal parameters
+  temporal_window: 30  # days of lookback for temporal encoding
+
+model:
+  # TGN Architecture
+  tgn:
+    memory_dim: 128
+    time_encoding_dim: 32
+    embedding_dim: 128
+    num_attention_heads: 4
+    num_gnn_layers: 2
+    dropout: 0.1
+    memory_updater: "gru"  # "gru" or "rnn"
+    message_aggregator: "last"  # "mean" or "last"
+    embedding_module: "graph_attention"  # "graph_attention", "graph_sum", "identity"
+
+  # Static GNN baseline
+  static_gnn:
+    hidden_dim: 128
+    num_layers: 2
+    heads: 4
+    dropout: 0.1
+
+  # LSTM baseline
+  lstm:
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: false
+
+  # XGBoost baseline
+  xgboost:
+    n_estimators: 500
+    max_depth: 8
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 5
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+
+  # SIR contagion baseline
+  sir:
+    beta_range: [0.01, 0.5]  # infection rate search range
+    gamma_range: [0.01, 0.3]  # recovery rate search range
+    n_simulations: 1000
+
+training:
+  batch_size: 64
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  epochs: 200
+  patience: 25  # early stopping
+  num_folds: 5  # for cross-validation
+  val_ratio: 0.15
+  test_ratio: 0.15
+  # Class imbalance handling
+  pos_weight: 10.0  # positive class weight for BCE loss
+  focal_loss_gamma: 2.0
+  # Prediction horizons (hours) — daily snapshots so minimum useful is 24h
+  prediction_horizons: [24, 72, 168, 720]  # 1d, 3d, 7d, 30d
+  # Scheduler
+  scheduler:
+    type: "cosine"
+    T_max: 200
+    eta_min: 0.000001
+
+evaluation:
+  # Metrics
+  metrics:
+    - "auroc"
+    - "auprc"
+    - "f1"
+    - "precision"
+    - "recall"
+    - "brier_score"
+    - "lead_time_hours"
+    - "mcc"  # Matthews correlation coefficient
+  # Statistical tests
+  statistical_tests:
+    confidence_level: 0.95
+    bootstrap_iterations: 10000
+    diebold_mariano: true
+    mcnemar: true
+    wilcoxon: true
+    paired_ttest: true
+  # Ablation studies
+  ablation:
+    feature_groups:
+      - "tvl_features"
+      - "price_features"
+      - "liquidity_features"
+      - "network_features"
+      - "macro_features"
+      - "temporal_features"
+    temporal_windows: [7, 14, 30, 60, 90]
+    edge_types_to_ablate:
+      - "shared_collateral"
+      - "liquidity_flow"
+      - "oracle_dependency"
+      - "governance_overlap"
+      - "price_correlation"
+      - "liquidation_pathway"
+    model_components:
+      - "memory_module"
+      - "temporal_encoding"
+      - "multi_head_attention"
+      - "graph_structure"

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+dist/
+build/
+.env
+*.log
+outputs/
+defi_cascade_predictor/outputs/
+defi_cascade_predictor/data/real/
+*.zip
+.ipynb_checkpoints/

@@ -711,7 +711,7 @@ class ExperimentRunner:
         val_sl = prepared["splits"]["val"]
 
         mono_reg = MonotonicityRegularization(
-            prediction_horizons=self.horizons, weight=0.5
+            prediction_horizons=self.horizons, weight=0.1
         )
 
         epochs = tc.get("epochs", 200)

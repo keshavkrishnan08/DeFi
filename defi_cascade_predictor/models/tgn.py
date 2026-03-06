@@ -176,47 +176,63 @@ class TemporalGraphNetwork(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Gather neighbor node features and edge features for temporal attention.
 
+        Vectorized — no Python loops over edges.
+
         Returns:
             neighbor_features: [num_nodes, max_neighbors, embedding_dim]
             edge_features: [num_nodes, max_neighbors, edge_feature_dim]
         """
         device = x.device
         num_nodes = x.size(0)
+        max_k = 8  # cap neighbors for efficiency
 
-        # Collect all neighbors per node across edge types
-        all_neighbors = {i: [] for i in range(num_nodes)}
-        all_edge_feats = {i: [] for i in range(num_nodes)}
+        # Collect all (dst, src) pairs and edge features across edge types
+        all_dst = []
+        all_src = []
+        all_eattr = []
 
         for etype, ei in edge_index_dict.items():
             if ei.size(1) == 0:
                 continue
-            src, dst = ei[0], ei[1]
-            edge_attr = edge_attr_dict.get(etype) if edge_attr_dict else None
+            all_src.append(ei[0])
+            all_dst.append(ei[1])
+            ea = edge_attr_dict.get(etype) if edge_attr_dict else None
+            if ea is not None and ea.size(0) == ei.size(1):
+                all_eattr.append(ea)
+            else:
+                all_eattr.append(
+                    torch.zeros(ei.size(1), self.edge_feature_dim, device=device)
+                )
 
-            for idx in range(ei.size(1)):
-                s, d = src[idx].item(), dst[idx].item()
-                all_neighbors[d].append(s)
-                if edge_attr is not None:
-                    all_edge_feats[d].append(edge_attr[idx])
-                else:
-                    all_edge_feats[d].append(
-                        torch.zeros(self.edge_feature_dim, device=device)
-                    )
+        if not all_dst:
+            # No edges — return self-loops as dummy neighbors
+            return (
+                x.unsqueeze(1),  # [N, 1, emb]
+                torch.zeros(num_nodes, 1, self.edge_feature_dim, device=device),
+            )
 
-        # Determine max neighbors (cap at 8 for efficiency)
-        max_k = min(max(len(v) for v in all_neighbors.values()) if num_nodes > 0 else 1, 8)
-        max_k = max(max_k, 1)  # at least 1
+        src_cat = torch.cat(all_src)       # [total_edges]
+        dst_cat = torch.cat(all_dst)       # [total_edges]
+        eattr_cat = torch.cat(all_eattr)   # [total_edges, edge_dim]
 
-        neighbor_feats = torch.zeros(num_nodes, max_k, self.embedding_dim, device=device)
-        edge_feats = torch.zeros(num_nodes, max_k, self.edge_feature_dim, device=device)
+        # Count neighbors per destination node
+        neighbor_count = torch.zeros(num_nodes, dtype=torch.long, device=device)
+        neighbor_count.scatter_add_(0, dst_cat, torch.ones_like(dst_cat))
+        actual_max_k = min(int(neighbor_count.max().item()), max_k)
+        actual_max_k = max(actual_max_k, 1)
 
-        for node_id in range(num_nodes):
-            nbrs = all_neighbors[node_id]
-            efeats = all_edge_feats[node_id]
-            k = min(len(nbrs), max_k)
-            for j in range(k):
-                neighbor_feats[node_id, j] = x[nbrs[j]]
-                edge_feats[node_id, j] = efeats[j]
+        neighbor_feats = torch.zeros(num_nodes, actual_max_k, self.embedding_dim, device=device)
+        edge_feats = torch.zeros(num_nodes, actual_max_k, self.edge_feature_dim, device=device)
+
+        # Fill slots per destination using a position counter
+        pos = torch.zeros(num_nodes, dtype=torch.long, device=device)
+        for i in range(len(src_cat)):
+            d = dst_cat[i].item()
+            p = pos[d].item()
+            if p < actual_max_k:
+                neighbor_feats[d, p] = x[src_cat[i]]
+                edge_feats[d, p] = eattr_cat[i]
+                pos[d] += 1
 
         return neighbor_feats, edge_feats
 
@@ -259,7 +275,9 @@ class TemporalGraphNetwork(nn.Module):
         else:
             ts = timestamps
         time_delta = ts - self.memory.last_update[:self.num_nodes].to(device)
-        time_delta = time_delta.clamp(min=0)  # non-negative time deltas
+        time_delta = time_delta.clamp(min=0)
+        # Normalize to days (timestamps are Unix seconds — raw deltas ~1e9)
+        time_delta = time_delta / 86400.0
         time_enc = self.time_encoder(time_delta)  # [num_nodes, time_encoding_dim]
 
         # 4. Time-aware memory fusion

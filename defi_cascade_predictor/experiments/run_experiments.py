@@ -929,10 +929,11 @@ class ExperimentRunner:
         try:
             sgnn = StaticGNNCascadePredictor(
                 node_feature_dim=prepared["feature_dim"],
-                hidden_dim=128,
+                hidden_dim=64,
                 num_layers=2,
-                heads=4,
+                heads=2,
                 prediction_horizons=self.horizons,
+                dropout=0.2,
             ).to(self.device)
             sgnn_preds = self._train_static_gnn(sgnn, prepared)
             baselines["Static GNN"] = {"model": sgnn, "test_preds": sgnn_preds}
@@ -945,10 +946,11 @@ class ExperimentRunner:
         try:
             lstm = LSTMCascadePredictor(
                 input_dim=prepared["feature_dim"],
-                hidden_dim=128,
+                hidden_dim=64,
                 num_layers=2,
                 num_nodes=len(self.protocols),
                 prediction_horizons=self.horizons,
+                dropout=0.3,
             ).to(self.device)
             lstm_preds = self._train_lstm(lstm, prepared)
             baselines["LSTM"] = {"model": lstm, "test_preds": lstm_preds}
@@ -960,10 +962,10 @@ class ExperimentRunner:
         return baselines
 
     def _train_static_gnn(self, model, prepared, epochs=None):
+        """Actually train the static GNN baseline."""
         if epochs is None:
             epochs = self.config.get("training", {}).get("baseline_epochs", 80)
-        """Actually train the static GNN baseline."""
-        optimizer = torch.optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=2e-4, weight_decay=5e-4)
         criterion = FocalLoss(gamma=2.0, alpha=0.75)
         nf = prepared["node_features"]
         la = prepared["label_arrays"]
@@ -973,6 +975,7 @@ class ExperimentRunner:
 
         best_state = None
         best_val = float("inf")
+        no_improve = 0
 
         for epoch in range(epochs):
             model.train()
@@ -987,6 +990,7 @@ class ExperimentRunner:
                 )
                 optimizer.zero_grad()
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
                 epoch_loss += loss.item()
 
@@ -1007,6 +1011,11 @@ class ExperimentRunner:
             if val_loss < best_val:
                 best_val = val_loss
                 best_state = copy.deepcopy(model.state_dict())
+                no_improve = 0
+            else:
+                no_improve += 1
+            if no_improve >= 20:
+                break
 
         if best_state:
             model.load_state_dict(best_state)
@@ -1018,7 +1027,7 @@ class ExperimentRunner:
         """Actually train the LSTM baseline."""
         if epochs is None:
             epochs = self.config.get("training", {}).get("baseline_epochs", 80)
-        optimizer = torch.optim.Adam(model.parameters(), lr=2e-4, weight_decay=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=5e-4)
         criterion = FocalLoss(gamma=2.0, alpha=0.75)
         nf = prepared["node_features"]  # [T, N, F]
         la = prepared["label_arrays"]
@@ -1028,6 +1037,7 @@ class ExperimentRunner:
 
         best_state = None
         best_val = float("inf")
+        no_improve = 0
 
         for epoch in range(epochs):
             model.train()
@@ -1064,6 +1074,11 @@ class ExperimentRunner:
             if val_loss < best_val:
                 best_val = val_loss
                 best_state = copy.deepcopy(model.state_dict())
+                no_improve = 0
+            else:
+                no_improve += 1
+            if no_improve >= 20:
+                break
 
         if best_state:
             model.load_state_dict(best_state)

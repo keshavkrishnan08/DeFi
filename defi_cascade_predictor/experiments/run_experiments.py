@@ -691,11 +691,15 @@ class ExperimentRunner:
             lr=tc.get("learning_rate", 3e-4),
             weight_decay=tc.get("weight_decay", 1e-4),
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            T_max=tc.get("epochs", 200),
-            eta_min=1e-6,
+            mode="min",
+            factor=0.5,
+            patience=10,
+            min_lr=1e-6,
         )
+        # Linear warmup for first 10 epochs
+        warmup_epochs = 10
 
         criterion = FocalLoss(
             gamma=tc.get("focal_loss_gamma", 2.0),
@@ -714,8 +718,8 @@ class ExperimentRunner:
             prediction_horizons=self.horizons, weight=0.1
         )
 
-        epochs = tc.get("epochs", 200)
-        patience = tc.get("patience", 25)
+        epochs = tc.get("epochs", 300)
+        patience = tc.get("patience", 35)
         tbptt_window = 10  # Backprop through 10 timesteps before detaching
         best_val = float("inf")
         best_state = None
@@ -727,10 +731,14 @@ class ExperimentRunner:
         for epoch in range(epochs):
             # --- TRAIN ---
             model.train()
-            # Reset memory ONLY at epoch 0; thereafter let it persist
-            # across epochs so the GRU builds long-term state
-            if epoch == 0:
-                model.reset_memory()
+            # Reset memory each epoch to prevent training-order overfitting
+            model.reset_memory()
+
+            # Linear warmup: scale LR for first N epochs
+            if epoch < warmup_epochs:
+                warmup_factor = (epoch + 1) / warmup_epochs
+                for pg in optimizer.param_groups:
+                    pg["lr"] = tc.get("learning_rate", 3e-4) * warmup_factor
 
             epoch_loss = 0.0
             n_train = 0
@@ -813,7 +821,8 @@ class ExperimentRunner:
 
             avg_val = val_loss / max(n_val, 1)
             val_losses.append(avg_val)
-            scheduler.step()
+            if epoch >= warmup_epochs:
+                scheduler.step(avg_val)
 
             if avg_val < best_val:
                 best_val = avg_val
@@ -1501,11 +1510,12 @@ class ExperimentRunner:
                 y_true_trimmed = y_true[:min(len(y_true), min(len(v) for v in model_preds.values()))]
                 model_preds = {k: v[:len(y_true_trimmed)] for k, v in model_preds.items()}
                 if y_true_trimmed.sum() > 0:
+                    horizon_label = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}.get(h, f"{h}h")
                     viz.plot_roc_curves(y_true_trimmed, model_preds,
-                                       f"{h}h" if h < 168 else "7d",
+                                       horizon_label,
                                        f"roc_{key}.pdf")
                     viz.plot_pr_curves(y_true_trimmed, model_preds,
-                                      f"{h}h" if h < 168 else "7d",
+                                      horizon_label,
                                       f"pr_{key}.pdf")
 
         # Ablation heatmaps

@@ -224,15 +224,29 @@ class TemporalGraphNetwork(nn.Module):
         neighbor_feats = torch.zeros(num_nodes, actual_max_k, self.embedding_dim, device=device)
         edge_feats = torch.zeros(num_nodes, actual_max_k, self.edge_feature_dim, device=device)
 
-        # Fill slots per destination using a position counter
-        pos = torch.zeros(num_nodes, dtype=torch.long, device=device)
-        for i in range(len(src_cat)):
-            d = dst_cat[i].item()
-            p = pos[d].item()
-            if p < actual_max_k:
-                neighbor_feats[d, p] = x[src_cat[i]]
-                edge_feats[d, p] = eattr_cat[i]
-                pos[d] += 1
+        # Vectorized slot filling: sort by destination, then assign positions
+        sort_idx = torch.argsort(dst_cat)
+        dst_sorted = dst_cat[sort_idx]
+        src_sorted = src_cat[sort_idx]
+        eattr_sorted = eattr_cat[sort_idx]
+
+        # Compute position within each destination group
+        # For each edge, its position = how many edges to the same dst came before it
+        ones = torch.ones_like(dst_sorted)
+        cumcount = torch.zeros_like(dst_sorted)
+        for node_id in dst_sorted.unique():
+            mask = dst_sorted == node_id
+            cumcount[mask] = torch.arange(mask.sum(), device=device)
+
+        # Only keep edges within the max_k budget
+        valid = cumcount < actual_max_k
+        if valid.any():
+            d_valid = dst_sorted[valid]
+            s_valid = src_sorted[valid]
+            e_valid = eattr_sorted[valid]
+            p_valid = cumcount[valid]
+            neighbor_feats[d_valid, p_valid] = x[s_valid]
+            edge_feats[d_valid, p_valid] = e_valid
 
         return neighbor_feats, edge_feats
 

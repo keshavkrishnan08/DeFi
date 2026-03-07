@@ -731,8 +731,10 @@ class ExperimentRunner:
         for epoch in range(epochs):
             # --- TRAIN ---
             model.train()
-            # Reset memory each epoch to prevent training-order overfitting
-            model.reset_memory()
+            # Reset memory at epoch 0 only; persistent memory across epochs
+            # lets the GRU build long-term state for 7d/30d horizons
+            if epoch == 0:
+                model.reset_memory()
 
             # Linear warmup: scale LR for first N epochs
             if epoch < warmup_epochs:
@@ -751,10 +753,13 @@ class ExperimentRunner:
 
                 preds = model(x, eid, timestamp)
 
+                # Horizon weights: emphasize short-term where TGN
+                # has most room to improve vs XGBoost
+                horizon_weights = {24: 2.0, 72: 1.5, 168: 1.0, 720: 1.0}
                 loss = torch.tensor(0.0, device=self.device)
                 for h in self.horizons:
                     key = f"cascade_{h}h"
-                    loss = loss + criterion(
+                    loss = loss + horizon_weights.get(h, 1.0) * criterion(
                         preds[key].unsqueeze(0),
                         la[key][t].unsqueeze(0).to(self.device),
                     )

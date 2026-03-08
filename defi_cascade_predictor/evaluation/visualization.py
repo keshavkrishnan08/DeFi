@@ -402,6 +402,110 @@ class PaperVisualizer:
         plt.close(fig)
         logger.info(f"Saved graph visualization to {filename}")
 
+    def plot_early_warning(
+        self,
+        early_warning_data: dict,
+        horizons: list[int],
+        filename: str = "early_warning.pdf",
+    ):
+        """Bar chart of average lead times per horizon and threshold."""
+        fig, ax = plt.subplots(figsize=(6, 4))
+        avg_lead = early_warning_data.get("average_lead_times", {})
+        thresholds = early_warning_data.get("thresholds", [0.3, 0.5, 0.7])
+        horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
+
+        x = np.arange(len(horizons))
+        bar_w = 0.8 / len(thresholds)
+        colors = ["#4CAF50", "#FF9800", "#F44336"]
+
+        for i, thr in enumerate(thresholds):
+            vals = [avg_lead.get(thr, {}).get(f"cascade_{h}h", 0) / 24 for h in horizons]
+            offset = (i - len(thresholds) / 2 + 0.5) * bar_w
+            bars = ax.bar(x + offset, vals, bar_w, label=f"Threshold={thr}",
+                         color=colors[i % len(colors)], alpha=0.85)
+            for bar, val in zip(bars, vals):
+                if val > 0:
+                    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                            f"{val:.0f}d", ha="center", va="bottom", fontsize=7)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([horizon_labels.get(h, f"{h}h") for h in horizons])
+        ax.set_xlabel("Prediction Horizon")
+        ax.set_ylabel("Average Lead Time (days)")
+        ax.set_title("Early Warning Lead Time Analysis")
+        ax.legend(framealpha=0.9)
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved early warning plot to {filename}")
+
+    def plot_sensitivity(
+        self,
+        sensitivity_data: dict,
+        horizons: list[int],
+        filename: str = "sensitivity_analysis.pdf",
+    ):
+        """Heatmap of AUROC across hyperparameter configurations."""
+        fig, ax = plt.subplots(figsize=(6, 4))
+        horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
+
+        configs = []
+        data = []
+        for config_name, config_data in sensitivity_data.items():
+            metrics = config_data.get("metrics", {})
+            row = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in horizons]
+            data.append(row)
+            configs.append(config_name.replace("_", " ").title())
+
+        if not data:
+            return
+
+        df = pd.DataFrame(data, index=configs,
+                          columns=[horizon_labels.get(h, f"{h}h") for h in horizons])
+        sns.heatmap(df, annot=True, fmt=".3f", cmap="YlOrRd", ax=ax,
+                    linewidths=0.5, vmin=0.5, vmax=1.0)
+        ax.set_title("Sensitivity Analysis: AUROC by Configuration")
+        ax.set_xlabel("Prediction Horizon")
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved sensitivity plot to {filename}")
+
+    def plot_temporal_robustness(
+        self,
+        robustness_data: dict,
+        horizons: list[int],
+        filename: str = "temporal_robustness.pdf",
+    ):
+        """Grouped bar chart of AUROC across temporal windows."""
+        fig, ax = plt.subplots(figsize=(6, 4))
+        horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
+        windows = list(robustness_data.keys())
+        n_windows = len(windows)
+        x = np.arange(len(horizons))
+        bar_w = 0.8 / max(n_windows, 1)
+        colors = ["#2196F3", "#4CAF50", "#FF9800"]
+
+        for i, window_name in enumerate(windows):
+            metrics = robustness_data[window_name]
+            vals = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in horizons]
+            offset = (i - n_windows / 2 + 0.5) * bar_w
+            bars = ax.bar(x + offset, vals, bar_w, label=window_name.title(),
+                         color=colors[i % len(colors)], alpha=0.85)
+            for bar, val in zip(bars, vals):
+                if val > 0:
+                    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                            f"{val:.3f}", ha="center", va="bottom", fontsize=7)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([horizon_labels.get(h, f"{h}h") for h in horizons])
+        ax.set_xlabel("Prediction Horizon")
+        ax.set_ylabel("AUROC")
+        ax.set_title("Temporal Robustness: AUROC Across Time Windows")
+        ax.legend(framealpha=0.9)
+        ax.set_ylim([0, 1.1])
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved temporal robustness plot to {filename}")
+
     def generate_all_paper_figures(
         self,
         results: dict,

@@ -1543,6 +1543,57 @@ class ExperimentRunner:
             for abl_type, abl_data in self.results["ablation"].items():
                 viz.plot_ablation_heatmap(abl_data, f"ablation_{abl_type}.pdf")
 
+        # Case study plots
+        if "case_studies" in self.results:
+            for event_name, cs in self.results["case_studies"].items():
+                try:
+                    cs_dates = [pd.Timestamp(d) for d in cs["dates"]]
+                    tvl_vals = np.array(cs.get("tvl", [0] * len(cs_dates)))
+                    # Use 7d horizon predictions for case study
+                    preds_7d = np.array(cs["predictions"].get("cascade_168h", [0] * len(cs_dates)))
+                    if len(tvl_vals) == len(cs_dates) and len(preds_7d) == len(cs_dates):
+                        viz.plot_cascade_case_study(
+                            np.array(cs_dates), tvl_vals, preds_7d,
+                            event_name.replace("_", " ").title(),
+                            cs["start"], cs["end"],
+                            f"case_study_{event_name}.pdf",
+                        )
+                except Exception as e:
+                    logger.warning(f"Could not plot case study {event_name}: {e}")
+
+        # Early warning lead time table
+        if "early_warning" in self.results:
+            try:
+                viz.plot_early_warning(
+                    self.results["early_warning"],
+                    self.horizons,
+                    "early_warning.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot early warning: {e}")
+
+        # Sensitivity analysis
+        if "sensitivity" in self.results:
+            try:
+                viz.plot_sensitivity(
+                    self.results["sensitivity"],
+                    self.horizons,
+                    "sensitivity_analysis.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot sensitivity: {e}")
+
+        # Temporal robustness
+        if "temporal_robustness" in self.results:
+            try:
+                viz.plot_temporal_robustness(
+                    self.results["temporal_robustness"],
+                    self.horizons,
+                    "temporal_robustness.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot temporal robustness: {e}")
+
         # Save JSON results
         results_dir = self.output_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
@@ -1565,7 +1616,8 @@ class ExperimentRunner:
         # Save only serializable results
         save_results = {
             k: v for k, v in self.results.items()
-            if k not in ("all_preds", "test_targets")
+            if k not in ("all_preds", "test_targets", "_all_preds_timeline",
+                         "_tvl_data", "_timing", "_model_params")
         }
         try:
             with open(results_dir / "experiment_results.json", "w") as f:
@@ -1574,6 +1626,485 @@ class ExperimentRunner:
             logger.warning(f"Could not save full results JSON: {e}")
 
         logger.info(f"Outputs saved to {self.output_dir}")
+
+    # ------------------------------------------------------------------ #
+    # Phase 10: Early Warning / Lead Time Analysis
+    # ------------------------------------------------------------------ #
+    @torch.no_grad()
+    def run_early_warning_analysis(self, tgn_model, prepared) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 10: EARLY WARNING ANALYSIS")
+        logger.info("=" * 60)
+
+        nf = prepared["node_features"]
+        ts = prepared["timestamps"]
+        eid = prepared["edge_index_dict"]
+        dates = self._all_dates
+
+        # Get TGN predictions for ALL timesteps (need to warm up from start)
+        tgn_model.eval()
+        tgn_model.reset_memory()
+        all_preds = {f"cascade_{h}h": [] for h in self.horizons}
+
+        for t in range(len(nf)):
+            x = nf[t].to(self.device)
+            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+            out = tgn_model(x, eid, timestamp)
+            tgn_model.memory.detach_memory()
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                all_preds[key].append(torch.sigmoid(out[key]).cpu().item())
+
+        # Analyze lead time for each known cascade event
+        thresholds = [0.3, 0.5, 0.7]
+        event_analyses = []
+
+        for event in RealDataPipeline.CASCADE_EVENTS:
+            event_start = pd.Timestamp(event["start"])
+            # Find the index of the event start
+            start_idx = None
+            for i, d in enumerate(dates):
+                if d >= event_start:
+                    start_idx = i
+                    break
+            if start_idx is None or start_idx < 30:
+                continue
+
+            # Look at predictions in the 60 days before the event
+            lookback = 60
+            window_start = max(0, start_idx - lookback)
+
+            lead_times = {}
+            for threshold in thresholds:
+                lead_times[threshold] = {}
+                for h in self.horizons:
+                    key = f"cascade_{h}h"
+                    preds_window = all_preds[key][window_start:start_idx]
+                    # Find first day where prediction exceeds threshold
+                    lead_hours = 0
+                    for day_offset, p in enumerate(reversed(preds_window)):
+                        if p >= threshold:
+                            lead_hours = (day_offset + 1) * 24
+                        else:
+                            break
+                    lead_times[threshold][key] = lead_hours
+
+            # Peak prediction in pre-event window
+            peak_preds = {}
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                preds_window = all_preds[key][window_start:start_idx]
+                peak_preds[key] = max(preds_window) if preds_window else 0.0
+
+            event_analyses.append({
+                "event": event["name"],
+                "severity": event["severity"],
+                "start": str(event_start.date()),
+                "lead_times": lead_times,
+                "peak_predictions": peak_preds,
+            })
+
+            logger.info(f"  {event['name']}:")
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                lt50 = lead_times[0.5].get(key, 0)
+                peak = peak_preds.get(key, 0)
+                logger.info(f"    {key}: lead_time@0.5={lt50}h, peak={peak:.3f}")
+
+        # Average lead times across events
+        avg_lead = {}
+        for threshold in thresholds:
+            avg_lead[threshold] = {}
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                times = [e["lead_times"][threshold][key] for e in event_analyses
+                         if e["lead_times"][threshold][key] > 0]
+                avg_lead[threshold][key] = np.mean(times) if times else 0
+
+        results = {
+            "event_analyses": event_analyses,
+            "average_lead_times": avg_lead,
+            "thresholds": thresholds,
+        }
+        self.results["early_warning"] = results
+        self.results["_all_preds_timeline"] = all_preds
+        logger.info("Early warning analysis complete")
+        return results
+
+    # ------------------------------------------------------------------ #
+    # Phase 11: Case Studies
+    # ------------------------------------------------------------------ #
+    def run_case_studies(self, tgn_model, prepared) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 11: CASE STUDIES")
+        logger.info("=" * 60)
+
+        dates = self._all_dates
+        all_preds = self.results.get("_all_preds_timeline", {})
+        if not all_preds:
+            logger.warning("No prediction timeline available, skipping case studies")
+            return {}
+
+        # Get TVL data for plotting
+        tvl_data = self.results.get("_tvl_data", None)
+
+        case_studies = {}
+        for event in RealDataPipeline.CASCADE_EVENTS:
+            event_start = pd.Timestamp(event["start"])
+            event_end = pd.Timestamp(event["end"])
+
+            # Window: 30 days before to 15 days after
+            window_start = event_start - pd.Timedelta(days=30)
+            window_end = event_end + pd.Timedelta(days=15)
+
+            # Find indices
+            indices = []
+            window_dates = []
+            for i, d in enumerate(dates):
+                if window_start <= d <= window_end:
+                    indices.append(i)
+                    window_dates.append(d)
+
+            if len(indices) < 10:
+                continue
+
+            cs = {
+                "event_name": event["name"],
+                "severity": event["severity"],
+                "start": str(event_start.date()),
+                "end": str(event_end.date()),
+                "dates": [str(d.date()) for d in window_dates],
+                "predictions": {},
+            }
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                cs["predictions"][key] = [all_preds[key][i] for i in indices]
+
+            if tvl_data is not None:
+                cs["tvl"] = [float(tvl_data[i]) for i in indices if i < len(tvl_data)]
+
+            case_studies[event["name"]] = cs
+            logger.info(f"  Case study: {event['name']} ({len(indices)} days)")
+
+        self.results["case_studies"] = case_studies
+        logger.info("Case studies complete")
+        return case_studies
+
+    # ------------------------------------------------------------------ #
+    # Phase 12: Computational Cost Analysis
+    # ------------------------------------------------------------------ #
+    def run_computational_cost_analysis(self) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 12: COMPUTATIONAL COST")
+        logger.info("=" * 60)
+
+        cost = self.results.get("_timing", {})
+        # Model sizes
+        cost["model_sizes"] = {}
+        for name, params in self.results.get("_model_params", {}).items():
+            cost["model_sizes"][name] = params
+
+        self.results["computational_cost"] = cost
+
+        for name, data in cost.items():
+            if isinstance(data, dict):
+                logger.info(f"  {name}: {data}")
+
+        logger.info("Computational cost analysis complete")
+        return cost
+
+    # ------------------------------------------------------------------ #
+    # Phase 13: Sensitivity Analysis
+    # ------------------------------------------------------------------ #
+    def run_sensitivity_analysis(self, prepared: dict) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 13: SENSITIVITY ANALYSIS")
+        logger.info("=" * 60)
+
+        mc = MetricsCalculator(prediction_horizons=self.horizons)
+        base_targets = self.results.get("test_targets", {})
+        sensitivity_results = {}
+
+        # Hyperparameter variations to test
+        configs = {
+            "memory_dim_64": {"memory_dim": 64, "embedding_dim": 64},
+            "memory_dim_256": {"memory_dim": 256, "embedding_dim": 256},
+            "gnn_layers_1": {"num_gnn_layers": 1},
+            "gnn_layers_3": {"num_gnn_layers": 3},
+            "heads_2": {"num_attention_heads": 2},
+            "heads_8": {"num_attention_heads": 8},
+        }
+
+        for config_name, overrides in configs.items():
+            logger.info(f"  Testing: {config_name}")
+            try:
+                mc_cfg = self.config.get("model", {}).get("tgn", {}).copy()
+                mc_cfg.update(overrides)
+
+                model = TemporalGraphNetwork(
+                    num_nodes=len(self.protocols),
+                    node_feature_dim=prepared["feature_dim"],
+                    edge_types=self.edge_types,
+                    memory_dim=mc_cfg.get("memory_dim", 128),
+                    time_encoding_dim=mc_cfg.get("time_encoding_dim", 32),
+                    embedding_dim=mc_cfg.get("embedding_dim", 128),
+                    num_attention_heads=mc_cfg.get("num_attention_heads", 4),
+                    num_gnn_layers=mc_cfg.get("num_gnn_layers", 2),
+                    prediction_horizons=self.horizons,
+                    dropout=mc_cfg.get("dropout", 0.2),
+                ).to(self.device)
+
+                n_params = model.get_num_parameters()
+
+                # Quick train (reduced epochs for sensitivity)
+                optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=5e-4)
+                criterion = FocalLoss(gamma=2.0, alpha=0.75)
+                nf = prepared["node_features"]
+                ts = prepared["timestamps"]
+                la = prepared["label_arrays"]
+                eid = prepared["edge_index_dict"]
+                train_sl = prepared["splits"]["train"]
+                test_sl = prepared["splits"]["test"]
+                train_indices = list(range(*train_sl.indices(len(nf))))
+
+                sens_epochs = self.config.get("training", {}).get("sensitivity_epochs", 40)
+                best_state = None
+                best_val = float("inf")
+                val_sl = prepared["splits"]["val"]
+
+                for epoch in range(sens_epochs):
+                    model.train()
+                    if epoch == 0:
+                        model.reset_memory()
+                    wl = torch.tensor(0.0, device=self.device)
+                    wc = 0
+                    for step, t in enumerate(train_indices):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        preds = model(x, eid, timestamp)
+                        loss = sum(
+                            criterion(preds[f"cascade_{h}h"].unsqueeze(0),
+                                      la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device))
+                            for h in self.horizons
+                        )
+                        wl = wl + loss
+                        wc += 1
+                        if wc >= 10 or step == len(train_indices) - 1:
+                            (wl / wc).backward()
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                            optimizer.step()
+                            optimizer.zero_grad()
+                            model.memory.detach_memory()
+                            wl = torch.tensor(0.0, device=self.device)
+                            wc = 0
+
+                    # Val check
+                    model.eval()
+                    model.reset_memory()
+                    with torch.no_grad():
+                        for t in train_indices:
+                            x = nf[t].to(self.device)
+                            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                            model(x, eid, timestamp)
+                            model.memory.detach_memory()
+                        vl = 0
+                        for t in range(*val_sl.indices(len(nf))):
+                            x = nf[t].to(self.device)
+                            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                            out = model(x, eid, timestamp)
+                            model.memory.detach_memory()
+                            vl += sum(
+                                criterion(out[f"cascade_{h}h"].unsqueeze(0),
+                                          la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device)).item()
+                                for h in self.horizons
+                            )
+                    if vl < best_val:
+                        best_val = vl
+                        best_state = copy.deepcopy(model.state_dict())
+
+                if best_state:
+                    model.load_state_dict(best_state)
+
+                # Evaluate on test
+                model.eval()
+                model.reset_memory()
+                with torch.no_grad():
+                    for t in range(test_sl.start):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        model(x, eid, timestamp)
+                        model.memory.detach_memory()
+
+                test_preds = {f"cascade_{h}h": [] for h in self.horizons}
+                with torch.no_grad():
+                    for t in range(*test_sl.indices(len(nf))):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        out = model(x, eid, timestamp)
+                        model.memory.detach_memory()
+                        for h in self.horizons:
+                            test_preds[f"cascade_{h}h"].append(
+                                torch.sigmoid(out[f"cascade_{h}h"]).cpu().item()
+                            )
+
+                metrics = mc.compute_multi_horizon_metrics(test_preds, base_targets)
+                sensitivity_results[config_name] = {
+                    "params": n_params,
+                    "metrics": metrics,
+                    "overrides": overrides,
+                }
+                aurocs = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in self.horizons]
+                logger.info(f"    params={n_params:,}, AUROC={[f'{a:.3f}' for a in aurocs]}")
+
+            except Exception as e:
+                logger.error(f"    Failed: {e}")
+                import traceback; traceback.print_exc()
+
+        self.results["sensitivity"] = sensitivity_results
+        logger.info("Sensitivity analysis complete")
+        return sensitivity_results
+
+    # ------------------------------------------------------------------ #
+    # Phase 14: Temporal Robustness (Rolling Window)
+    # ------------------------------------------------------------------ #
+    def run_temporal_robustness(self, prepared: dict) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 14: TEMPORAL ROBUSTNESS")
+        logger.info("=" * 60)
+
+        mc = MetricsCalculator(prediction_horizons=self.horizons)
+        nf = prepared["node_features"]
+        ts = prepared["timestamps"]
+        la = prepared["label_arrays"]
+        eid = prepared["edge_index_dict"]
+        T = len(nf)
+
+        # Define 3 rolling windows
+        windows = [
+            {"name": "early", "train": slice(0, int(T * 0.4)),
+             "val": slice(int(T * 0.4), int(T * 0.5)),
+             "test": slice(int(T * 0.5), int(T * 0.7))},
+            {"name": "middle", "train": slice(0, int(T * 0.5)),
+             "val": slice(int(T * 0.5), int(T * 0.65)),
+             "test": slice(int(T * 0.65), int(T * 0.85))},
+            {"name": "late", "train": slice(0, int(T * 0.6)),
+             "val": slice(int(T * 0.6), int(T * 0.7)),
+             "test": slice(int(T * 0.7), T)},
+        ]
+
+        robustness_results = {}
+
+        for window in windows:
+            logger.info(f"  Window '{window['name']}': "
+                       f"train={window['train']}, test={window['test']}")
+            try:
+                model = TemporalGraphNetwork(
+                    num_nodes=len(self.protocols),
+                    node_feature_dim=prepared["feature_dim"],
+                    edge_types=self.edge_types,
+                    memory_dim=128, time_encoding_dim=32, embedding_dim=128,
+                    num_attention_heads=4, num_gnn_layers=2,
+                    prediction_horizons=self.horizons, dropout=0.2,
+                ).to(self.device)
+
+                optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=5e-4)
+                criterion = FocalLoss(gamma=2.0, alpha=0.75)
+                train_indices = list(range(*window["train"].indices(T)))
+                val_sl = window["val"]
+                test_sl = window["test"]
+
+                rob_epochs = self.config.get("training", {}).get("robustness_epochs", 40)
+                best_state = None
+                best_val = float("inf")
+
+                for epoch in range(rob_epochs):
+                    model.train()
+                    if epoch == 0:
+                        model.reset_memory()
+                    wl = torch.tensor(0.0, device=self.device)
+                    wc = 0
+                    for step, t in enumerate(train_indices):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        preds = model(x, eid, timestamp)
+                        loss = sum(
+                            criterion(preds[f"cascade_{h}h"].unsqueeze(0),
+                                      la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device))
+                            for h in self.horizons
+                        )
+                        wl = wl + loss
+                        wc += 1
+                        if wc >= 10 or step == len(train_indices) - 1:
+                            (wl / wc).backward()
+                            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                            optimizer.step()
+                            optimizer.zero_grad()
+                            model.memory.detach_memory()
+                            wl = torch.tensor(0.0, device=self.device)
+                            wc = 0
+
+                    model.eval()
+                    model.reset_memory()
+                    with torch.no_grad():
+                        for t in train_indices:
+                            x = nf[t].to(self.device)
+                            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                            model(x, eid, timestamp)
+                            model.memory.detach_memory()
+                        vl = 0
+                        for t in range(*val_sl.indices(T)):
+                            x = nf[t].to(self.device)
+                            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                            out = model(x, eid, timestamp)
+                            model.memory.detach_memory()
+                            vl += sum(
+                                criterion(out[f"cascade_{h}h"].unsqueeze(0),
+                                          la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device)).item()
+                                for h in self.horizons
+                            )
+                    if vl < best_val:
+                        best_val = vl
+                        best_state = copy.deepcopy(model.state_dict())
+
+                if best_state:
+                    model.load_state_dict(best_state)
+
+                # Evaluate
+                model.eval()
+                model.reset_memory()
+                with torch.no_grad():
+                    for t in range(test_sl.start):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        model(x, eid, timestamp)
+                        model.memory.detach_memory()
+
+                test_preds = {f"cascade_{h}h": [] for h in self.horizons}
+                test_targets = {f"cascade_{h}h": [] for h in self.horizons}
+                with torch.no_grad():
+                    for t in range(*test_sl.indices(T)):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        out = model(x, eid, timestamp)
+                        model.memory.detach_memory()
+                        for h in self.horizons:
+                            key = f"cascade_{h}h"
+                            test_preds[key].append(
+                                torch.sigmoid(out[key]).cpu().item())
+                            test_targets[key].append(la[key][t].item())
+
+                metrics = mc.compute_multi_horizon_metrics(test_preds, test_targets)
+                robustness_results[window["name"]] = metrics
+                aurocs = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in self.horizons]
+                logger.info(f"    AUROC: {[f'{a:.3f}' for a in aurocs]}")
+
+            except Exception as e:
+                logger.error(f"    Window '{window['name']}' failed: {e}")
+                import traceback; traceback.print_exc()
+
+        self.results["temporal_robustness"] = robustness_results
+        logger.info("Temporal robustness analysis complete")
+        return robustness_results
 
     # ------------------------------------------------------------------ #
     # Full Pipeline
@@ -1586,13 +2117,45 @@ class ExperimentRunner:
         t0 = _time.time()
 
         data = self.generate_data()
+
+        # Store TVL for case studies
+        self._all_dates = data["dates"]
+        self.results["_tvl_data"] = data["tvl"].sum(axis=1).tolist()
+
         graph = self.build_graph_and_features(data)
         prepared = self.prepare_data(graph)
+
+        # Track timing
+        self.results["_timing"] = {}
+        self.results["_model_params"] = {}
+
+        t1 = _time.time()
         tgn_model, history = self.train_tgn(prepared)
+        self.results["_timing"]["tgn_training_sec"] = _time.time() - t1
+        self.results["_model_params"]["TGN"] = tgn_model.get_num_parameters()
+
+        t1 = _time.time()
         baselines = self.train_baselines(prepared)
+        self.results["_timing"]["baselines_training_sec"] = _time.time() - t1
+        for name, bl in baselines.items():
+            if "model" in bl and hasattr(bl["model"], "parameters"):
+                try:
+                    n = sum(p.numel() for p in bl["model"].parameters())
+                    self.results["_model_params"][name] = n
+                except Exception:
+                    pass
+
         self.evaluate_all(tgn_model, baselines, prepared)
         self.run_statistical_tests()
         self.run_ablation_studies(prepared)
+
+        # New robustness experiments
+        self.run_early_warning_analysis(tgn_model, prepared)
+        self.run_case_studies(tgn_model, prepared)
+        self.run_computational_cost_analysis()
+        self.run_sensitivity_analysis(prepared)
+        self.run_temporal_robustness(prepared)
+
         self.generate_outputs()
 
         elapsed = _time.time() - t0

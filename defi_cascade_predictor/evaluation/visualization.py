@@ -469,6 +469,109 @@ class PaperVisualizer:
         plt.close(fig)
         logger.info(f"Saved sensitivity plot to {filename}")
 
+    def plot_calibration(
+        self,
+        calibration_data: dict,
+        horizons: list[int],
+        filename: str = "calibration.pdf",
+    ):
+        """Reliability diagram showing predicted vs actual probabilities."""
+        n_horizons = len(horizons)
+        fig, axes = plt.subplots(1, n_horizons, figsize=(3.5 * n_horizons, 3.5))
+        if n_horizons == 1:
+            axes = [axes]
+        horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
+
+        for idx, h in enumerate(horizons):
+            ax = axes[idx]
+            key = f"cascade_{h}h"
+            for model_name, color in [("TGN", COLORS["TGN"]), ("XGBoost", COLORS["XGBoost"])]:
+                cal = calibration_data.get(model_name, {}).get(key, {})
+                if cal:
+                    ax.plot(cal["bin_means"], cal["bin_true_freqs"], "o-",
+                            color=color, label=f'{model_name} (ECE={cal["ece"]:.3f})',
+                            markersize=4, linewidth=1.5)
+            ax.plot([0, 1], [0, 1], "k--", alpha=0.3, linewidth=0.8)
+            ax.set_xlabel("Predicted Probability")
+            if idx == 0:
+                ax.set_ylabel("Observed Frequency")
+            ax.set_title(f"{horizon_labels.get(h, f'{h}h')}")
+            ax.legend(fontsize=7, framealpha=0.9)
+            ax.set_xlim([0, 1])
+            ax.set_ylim([0, 1])
+
+        fig.suptitle("Calibration (Reliability Diagram)", fontsize=12)
+        fig.tight_layout()
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved calibration plot to {filename}")
+
+    def plot_attention_heatmap(
+        self,
+        protocol_importance: dict,
+        protocols: list[str],
+        filename: str = "attention_importance.pdf",
+    ):
+        """Bar chart of protocol attention importance."""
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sorted_items = sorted(protocol_importance.items(), key=lambda x: x[1], reverse=True)
+        names = [k.replace("-", "\n") for k, _ in sorted_items]
+        values = [v for _, v in sorted_items]
+        colors = plt.cm.Blues(np.linspace(0.3, 0.9, len(names)))
+        ax.barh(range(len(names)), values, color=colors)
+        ax.set_yticks(range(len(names)))
+        ax.set_yticklabels(names, fontsize=8)
+        ax.set_xlabel("Average Attention Weight")
+        ax.set_title("Protocol Importance (Attention Pooling)")
+        ax.invert_yaxis()
+        fig.tight_layout()
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved attention importance to {filename}")
+
+    def plot_backtest(
+        self,
+        backtest_data: dict,
+        horizons: list[int],
+        filename: str = "backtest.pdf",
+    ):
+        """Detection rate vs precision at different thresholds."""
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 3.5))
+        horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
+        thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+
+        for h in horizons:
+            key = f"cascade_{h}h"
+            det_rates = []
+            precisions = []
+            for thr in thresholds:
+                bt_key = f"threshold_{thr}_{key}"
+                bt = backtest_data.get(bt_key, {})
+                det_rates.append(bt.get("detection_rate", 0))
+                precisions.append(bt.get("alert_precision", 0))
+
+            color = HORIZON_COLORS.get(horizon_labels.get(h, ""), "#666")
+            label = horizon_labels.get(h, f"{h}h")
+            ax1.plot(thresholds, det_rates, "o-", color=color, label=label, linewidth=1.5)
+            ax2.plot(thresholds, precisions, "o-", color=color, label=label, linewidth=1.5)
+
+        ax1.set_xlabel("Alert Threshold")
+        ax1.set_ylabel("Detection Rate")
+        ax1.set_title("Cascade Detection Rate")
+        ax1.legend(framealpha=0.9)
+        ax1.set_ylim([0, 1.05])
+
+        ax2.set_xlabel("Alert Threshold")
+        ax2.set_ylabel("Alert Precision")
+        ax2.set_title("Alert Precision")
+        ax2.legend(framealpha=0.9)
+        ax2.set_ylim([0, 1.05])
+
+        fig.tight_layout()
+        fig.savefig(self.output_dir / filename)
+        plt.close(fig)
+        logger.info(f"Saved backtest plot to {filename}")
+
     def plot_temporal_robustness(
         self,
         robustness_data: dict,

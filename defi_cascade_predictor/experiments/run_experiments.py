@@ -1594,6 +1594,39 @@ class ExperimentRunner:
             except Exception as e:
                 logger.warning(f"Could not plot temporal robustness: {e}")
 
+        # Calibration
+        if "calibration" in self.results:
+            try:
+                viz.plot_calibration(
+                    self.results["calibration"],
+                    self.horizons,
+                    "calibration.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot calibration: {e}")
+
+        # Attention importance
+        if "attention_analysis" in self.results:
+            try:
+                viz.plot_attention_heatmap(
+                    self.results["attention_analysis"]["protocol_importance"],
+                    self.protocols,
+                    "attention_importance.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot attention: {e}")
+
+        # Backtest
+        if "backtest" in self.results:
+            try:
+                viz.plot_backtest(
+                    self.results["backtest"],
+                    self.horizons,
+                    "backtest.pdf",
+                )
+            except Exception as e:
+                logger.warning(f"Could not plot backtest: {e}")
+
         # Save JSON results
         results_dir = self.output_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
@@ -1617,7 +1650,8 @@ class ExperimentRunner:
         save_results = {
             k: v for k, v in self.results.items()
             if k not in ("all_preds", "test_targets", "_all_preds_timeline",
-                         "_tvl_data", "_timing", "_model_params")
+                         "_tvl_data", "_timing", "_model_params",
+                         "_attn_matrix", "_attn_dates")
         }
         try:
             with open(results_dir / "experiment_results.json", "w") as f:
@@ -2107,6 +2141,475 @@ class ExperimentRunner:
         return robustness_results
 
     # ------------------------------------------------------------------ #
+    # Phase 15: Multi-Seed Evaluation
+    # ------------------------------------------------------------------ #
+    def run_multi_seed_evaluation(self, prepared: dict) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 15: MULTI-SEED EVALUATION")
+        logger.info("=" * 60)
+
+        mc = MetricsCalculator(prediction_horizons=self.horizons)
+        base_targets = self.results.get("test_targets", {})
+        seeds = [42, 123, 456]
+        all_seed_metrics = []
+
+        nf = prepared["node_features"]
+        ts = prepared["timestamps"]
+        la = prepared["label_arrays"]
+        eid = prepared["edge_index_dict"]
+        sev = prepared["severity"]
+        train_sl = prepared["splits"]["train"]
+        val_sl = prepared["splits"]["val"]
+        test_sl = prepared["splits"]["test"]
+        tc = self.config.get("training", {})
+        mc_cfg = self.config.get("model", {}).get("tgn", {})
+
+        for seed in seeds:
+            logger.info(f"  Seed {seed}...")
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+
+            model = TemporalGraphNetwork(
+                num_nodes=len(self.protocols),
+                node_feature_dim=prepared["feature_dim"],
+                edge_types=self.edge_types,
+                memory_dim=mc_cfg.get("memory_dim", 128),
+                time_encoding_dim=mc_cfg.get("time_encoding_dim", 32),
+                embedding_dim=mc_cfg.get("embedding_dim", 128),
+                num_attention_heads=mc_cfg.get("num_attention_heads", 4),
+                num_gnn_layers=mc_cfg.get("num_gnn_layers", 2),
+                prediction_horizons=self.horizons,
+                dropout=mc_cfg.get("dropout", 0.2),
+            ).to(self.device)
+
+            optimizer = torch.optim.AdamW(
+                model.parameters(), lr=tc.get("learning_rate", 3e-4),
+                weight_decay=tc.get("weight_decay", 5e-4))
+            criterion = FocalLoss(gamma=2.0, alpha=0.75)
+            train_indices = list(range(*train_sl.indices(len(nf))))
+
+            seed_epochs = self.config.get("training", {}).get("seed_epochs", 60)
+            best_state = None
+            best_val = float("inf")
+            no_improve = 0
+
+            for epoch in range(seed_epochs):
+                model.train()
+                if epoch == 0:
+                    model.reset_memory()
+                wl = torch.tensor(0.0, device=self.device)
+                wc = 0
+                for step, t in enumerate(train_indices):
+                    x = nf[t].to(self.device)
+                    timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                    preds = model(x, eid, timestamp)
+                    horizon_weights = {24: 2.0, 72: 1.5, 168: 1.0, 720: 1.0}
+                    loss = sum(
+                        horizon_weights.get(h, 1.0) * criterion(
+                            preds[f"cascade_{h}h"].unsqueeze(0),
+                            la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device))
+                        for h in self.horizons
+                    )
+                    wl = wl + loss
+                    wc += 1
+                    if wc >= 10 or step == len(train_indices) - 1:
+                        (wl / wc).backward()
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        optimizer.step()
+                        optimizer.zero_grad()
+                        model.memory.detach_memory()
+                        wl = torch.tensor(0.0, device=self.device)
+                        wc = 0
+
+                model.eval()
+                model.reset_memory()
+                with torch.no_grad():
+                    for t in train_indices:
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        model(x, eid, timestamp)
+                        model.memory.detach_memory()
+                    vl = 0
+                    for t in range(*val_sl.indices(len(nf))):
+                        x = nf[t].to(self.device)
+                        timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                        out = model(x, eid, timestamp)
+                        model.memory.detach_memory()
+                        vl += sum(
+                            criterion(out[f"cascade_{h}h"].unsqueeze(0),
+                                      la[f"cascade_{h}h"][t].unsqueeze(0).to(self.device)).item()
+                            for h in self.horizons)
+                if vl < best_val:
+                    best_val = vl
+                    best_state = copy.deepcopy(model.state_dict())
+                    no_improve = 0
+                else:
+                    no_improve += 1
+                if no_improve >= 20:
+                    break
+
+            if best_state:
+                model.load_state_dict(best_state)
+
+            # Evaluate
+            model.eval()
+            model.reset_memory()
+            with torch.no_grad():
+                for t in range(test_sl.start):
+                    x = nf[t].to(self.device)
+                    timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                    model(x, eid, timestamp)
+                    model.memory.detach_memory()
+
+            test_preds = {f"cascade_{h}h": [] for h in self.horizons}
+            with torch.no_grad():
+                for t in range(*test_sl.indices(len(nf))):
+                    x = nf[t].to(self.device)
+                    timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+                    out = model(x, eid, timestamp)
+                    model.memory.detach_memory()
+                    for h in self.horizons:
+                        test_preds[f"cascade_{h}h"].append(
+                            torch.sigmoid(out[f"cascade_{h}h"]).cpu().item())
+
+            metrics = mc.compute_multi_horizon_metrics(test_preds, base_targets)
+            all_seed_metrics.append(metrics)
+            aurocs = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in self.horizons]
+            logger.info(f"    AUROC: {[f'{a:.3f}' for a in aurocs]}")
+
+        # Compute mean ± std
+        summary = {}
+        for h in self.horizons:
+            key = f"cascade_{h}h"
+            aurocs = [m.get(key, {}).get("auroc", 0) for m in all_seed_metrics]
+            auprcs = [m.get(key, {}).get("auprc", 0) for m in all_seed_metrics]
+            summary[key] = {
+                "auroc_mean": float(np.mean(aurocs)),
+                "auroc_std": float(np.std(aurocs)),
+                "auprc_mean": float(np.mean(auprcs)),
+                "auprc_std": float(np.std(auprcs)),
+                "auroc_values": aurocs,
+                "auprc_values": auprcs,
+            }
+            logger.info(f"  {key}: AUROC={np.mean(aurocs):.3f}±{np.std(aurocs):.3f}, "
+                       f"AUPRC={np.mean(auprcs):.3f}±{np.std(auprcs):.3f}")
+
+        self.results["multi_seed"] = summary
+        # Restore original seed
+        torch.manual_seed(self.config.get("project", {}).get("seed", 42))
+        np.random.seed(self.config.get("project", {}).get("seed", 42))
+        logger.info("Multi-seed evaluation complete")
+        return summary
+
+    # ------------------------------------------------------------------ #
+    # Phase 16: Calibration Analysis
+    # ------------------------------------------------------------------ #
+    def run_calibration_analysis(self) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 16: CALIBRATION ANALYSIS")
+        logger.info("=" * 60)
+
+        all_preds = self.results.get("all_preds", {})
+        targets = self.results.get("test_targets", {})
+        n_bins = 10
+        calibration_results = {}
+
+        for model_name in ["TGN", "XGBoost"]:
+            model_preds = all_preds.get(model_name, {})
+            model_cal = {}
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                y_pred = np.array(model_preds.get(key, []))
+                y_true = np.array(targets.get(key, []))
+                min_len = min(len(y_pred), len(y_true))
+                if min_len < 20:
+                    continue
+                y_pred = y_pred[:min_len]
+                y_true = y_true[:min_len]
+
+                # Bin predictions
+                bin_edges = np.linspace(0, 1, n_bins + 1)
+                bin_means = []
+                bin_true_freqs = []
+                bin_counts = []
+                for i in range(n_bins):
+                    mask = (y_pred >= bin_edges[i]) & (y_pred < bin_edges[i + 1])
+                    if i == n_bins - 1:
+                        mask = (y_pred >= bin_edges[i]) & (y_pred <= bin_edges[i + 1])
+                    if mask.sum() > 0:
+                        bin_means.append(float(y_pred[mask].mean()))
+                        bin_true_freqs.append(float(y_true[mask].mean()))
+                        bin_counts.append(int(mask.sum()))
+
+                # Expected Calibration Error
+                total = sum(bin_counts)
+                ece = sum(c / total * abs(f - m) for m, f, c in
+                         zip(bin_means, bin_true_freqs, bin_counts)) if total > 0 else 0
+
+                # Brier score
+                brier = float(np.mean((y_pred - y_true) ** 2))
+
+                model_cal[key] = {
+                    "bin_means": bin_means,
+                    "bin_true_freqs": bin_true_freqs,
+                    "bin_counts": bin_counts,
+                    "ece": ece,
+                    "brier_score": brier,
+                }
+                logger.info(f"  {model_name} {key}: ECE={ece:.4f}, Brier={brier:.4f}")
+
+            calibration_results[model_name] = model_cal
+
+        self.results["calibration"] = calibration_results
+        logger.info("Calibration analysis complete")
+        return calibration_results
+
+    # ------------------------------------------------------------------ #
+    # Phase 17: Attention / Interpretability Analysis
+    # ------------------------------------------------------------------ #
+    @torch.no_grad()
+    def run_attention_analysis(self, tgn_model, prepared) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 17: ATTENTION ANALYSIS")
+        logger.info("=" * 60)
+
+        nf = prepared["node_features"]
+        ts = prepared["timestamps"]
+        eid = prepared["edge_index_dict"]
+        test_sl = prepared["splits"]["test"]
+        dates = self._all_dates
+
+        tgn_model.eval()
+        tgn_model.reset_memory()
+
+        # Warm up on pre-test data
+        for t in range(test_sl.start):
+            x = nf[t].to(self.device)
+            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+            tgn_model(x, eid, timestamp)
+            tgn_model.memory.detach_memory()
+
+        # Collect attention weights during test
+        all_attn = []  # [T_test, num_protocols]
+        test_dates = []
+        for t in range(*test_sl.indices(len(nf))):
+            x = nf[t].to(self.device)
+            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+            out = tgn_model(x, eid, timestamp, return_embeddings=True)
+            tgn_model.memory.detach_memory()
+            attn = out.get("pool_attention", torch.zeros(len(self.protocols)))
+            all_attn.append(attn.cpu().numpy())
+            test_dates.append(str(dates[t].date()))
+
+        attn_matrix = np.array(all_attn)  # [T_test, num_protocols]
+
+        # Average attention per protocol
+        avg_attn = attn_matrix.mean(axis=0)
+        protocol_importance = {
+            self.protocols[i]: float(avg_attn[i])
+            for i in range(len(self.protocols))
+        }
+        # Sort by importance
+        sorted_importance = dict(sorted(protocol_importance.items(),
+                                        key=lambda x: x[1], reverse=True))
+
+        logger.info("  Protocol importance (avg attention):")
+        for proto, attn_val in sorted_importance.items():
+            logger.info(f"    {proto}: {attn_val:.4f}")
+
+        # Attention around cascade events
+        event_attention = {}
+        for event in RealDataPipeline.CASCADE_EVENTS:
+            event_start = pd.Timestamp(event["start"])
+            # Find test-period days near this event
+            event_days = []
+            for i, d in enumerate(dates[test_sl.start:test_sl.stop]):
+                if abs((d - event_start).days) <= 7:
+                    event_days.append(i)
+            if event_days:
+                event_attn = attn_matrix[event_days].mean(axis=0)
+                event_attention[event["name"]] = {
+                    self.protocols[j]: float(event_attn[j])
+                    for j in range(len(self.protocols))
+                }
+
+        results = {
+            "protocol_importance": sorted_importance,
+            "event_attention": event_attention,
+            "attention_matrix_shape": list(attn_matrix.shape),
+        }
+        self.results["attention_analysis"] = results
+        self.results["_attn_matrix"] = attn_matrix
+        self.results["_attn_dates"] = test_dates
+        logger.info("Attention analysis complete")
+        return results
+
+    # ------------------------------------------------------------------ #
+    # Phase 18: Per-Protocol Breakdown
+    # ------------------------------------------------------------------ #
+    @torch.no_grad()
+    def run_per_protocol_analysis(self, tgn_model, prepared) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 18: PER-PROTOCOL ANALYSIS")
+        logger.info("=" * 60)
+
+        nf = prepared["node_features"]
+        ts = prepared["timestamps"]
+        eid = prepared["edge_index_dict"]
+        la = prepared["label_arrays"]
+        test_sl = prepared["splits"]["test"]
+
+        tgn_model.eval()
+        tgn_model.reset_memory()
+
+        # Warm up
+        for t in range(test_sl.start):
+            x = nf[t].to(self.device)
+            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+            tgn_model(x, eid, timestamp)
+            tgn_model.memory.detach_memory()
+
+        # Collect per-node propagation predictions
+        per_node_preds = [[] for _ in range(len(self.protocols))]
+        per_node_targets = {f"cascade_{h}h": [] for h in self.horizons}
+
+        for t in range(*test_sl.indices(len(nf))):
+            x = nf[t].to(self.device)
+            timestamp = ts[t].expand(len(self.protocols)).to(self.device)
+            out = tgn_model(x, eid, timestamp, return_embeddings=True)
+            tgn_model.memory.detach_memory()
+
+            prop = torch.sigmoid(out["propagation"]).cpu().numpy().flatten()
+            for j in range(len(self.protocols)):
+                per_node_preds[j].append(float(prop[j]))
+            for h in self.horizons:
+                per_node_targets[f"cascade_{h}h"].append(la[f"cascade_{h}h"][t].item())
+
+        # Compute per-protocol stats
+        from sklearn.metrics import roc_auc_score
+        protocol_results = {}
+        targets_arr = np.array(per_node_targets["cascade_168h"])  # use 7d as reference
+
+        for j, proto in enumerate(self.protocols):
+            preds_arr = np.array(per_node_preds[j])
+            stats = {
+                "mean_risk": float(preds_arr.mean()),
+                "max_risk": float(preds_arr.max()),
+                "std_risk": float(preds_arr.std()),
+            }
+            if targets_arr.sum() > 0 and targets_arr.sum() < len(targets_arr):
+                try:
+                    stats["auroc_7d"] = float(roc_auc_score(targets_arr, preds_arr))
+                except Exception:
+                    stats["auroc_7d"] = 0.5
+            protocol_results[proto] = stats
+            logger.info(f"  {proto}: mean_risk={stats['mean_risk']:.3f}, "
+                       f"max_risk={stats['max_risk']:.3f}")
+
+        self.results["per_protocol"] = protocol_results
+        logger.info("Per-protocol analysis complete")
+        return protocol_results
+
+    # ------------------------------------------------------------------ #
+    # Phase 19: Backtest Simulation
+    # ------------------------------------------------------------------ #
+    def run_backtest_simulation(self) -> dict:
+        logger.info("=" * 60)
+        logger.info("PHASE 19: BACKTEST SIMULATION")
+        logger.info("=" * 60)
+
+        all_preds = self.results.get("_all_preds_timeline", {})
+        dates = self._all_dates
+        if not all_preds:
+            logger.warning("No prediction timeline; skipping backtest")
+            return {}
+
+        thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+        backtest_results = {}
+
+        for threshold in thresholds:
+            for h in self.horizons:
+                key = f"cascade_{h}h"
+                preds = all_preds.get(key, [])
+                if not preds:
+                    continue
+
+                # Walk through predictions and track alerts
+                alerts = []  # (date_idx, pred_value)
+                for i, p in enumerate(preds):
+                    if p >= threshold:
+                        alerts.append((i, p))
+
+                # Check against known cascade events
+                detected_events = []
+                missed_events = []
+                for event in RealDataPipeline.CASCADE_EVENTS:
+                    event_start = pd.Timestamp(event["start"])
+                    event_idx = None
+                    for i, d in enumerate(dates):
+                        if d >= event_start:
+                            event_idx = i
+                            break
+                    if event_idx is None:
+                        continue
+
+                    # Check if any alert was raised within h hours before event
+                    lookback_days = h // 24
+                    window_start = max(0, event_idx - lookback_days)
+                    detected = any(
+                        window_start <= a[0] < event_idx
+                        for a in alerts
+                    )
+                    if detected:
+                        detected_events.append(event["name"])
+                    else:
+                        missed_events.append(event["name"])
+
+                # False alarm analysis: alerts not near any known event
+                n_total_alerts = len(alerts)
+                n_true_alerts = 0
+                for a_idx, _ in alerts:
+                    near_event = False
+                    for event in RealDataPipeline.CASCADE_EVENTS:
+                        event_start = pd.Timestamp(event["start"])
+                        for i, d in enumerate(dates):
+                            if d >= event_start:
+                                if abs(a_idx - i) <= h // 24:
+                                    near_event = True
+                                break
+                    if near_event:
+                        n_true_alerts += 1
+
+                n_false_alerts = n_total_alerts - n_true_alerts
+                detection_rate = len(detected_events) / max(
+                    len(detected_events) + len(missed_events), 1)
+                precision = n_true_alerts / max(n_total_alerts, 1)
+
+                bt_key = f"threshold_{threshold}_{key}"
+                backtest_results[bt_key] = {
+                    "threshold": threshold,
+                    "horizon": key,
+                    "detected": detected_events,
+                    "missed": missed_events,
+                    "detection_rate": detection_rate,
+                    "total_alerts": n_total_alerts,
+                    "true_alerts": n_true_alerts,
+                    "false_alerts": n_false_alerts,
+                    "alert_precision": precision,
+                }
+
+            # Summary at this threshold (using 7d horizon)
+            key_7d = f"threshold_{threshold}_cascade_168h"
+            if key_7d in backtest_results:
+                bt = backtest_results[key_7d]
+                logger.info(f"  @{threshold}: detected {len(bt['detected'])}/{len(bt['detected'])+len(bt['missed'])} events, "
+                           f"precision={bt['alert_precision']:.2f}, alerts={bt['total_alerts']}")
+
+        self.results["backtest"] = backtest_results
+        logger.info("Backtest simulation complete")
+        return backtest_results
+
+    # ------------------------------------------------------------------ #
     # Full Pipeline
     # ------------------------------------------------------------------ #
     def run_full_pipeline(self) -> dict:
@@ -2149,12 +2652,19 @@ class ExperimentRunner:
         self.run_statistical_tests()
         self.run_ablation_studies(prepared)
 
-        # New robustness experiments
+        # Robustness experiments (Phases 10-14)
         self.run_early_warning_analysis(tgn_model, prepared)
         self.run_case_studies(tgn_model, prepared)
         self.run_computational_cost_analysis()
         self.run_sensitivity_analysis(prepared)
         self.run_temporal_robustness(prepared)
+
+        # Additional rigor experiments (Phases 15-19)
+        self.run_multi_seed_evaluation(prepared)
+        self.run_calibration_analysis()
+        self.run_attention_analysis(tgn_model, prepared)
+        self.run_per_protocol_analysis(tgn_model, prepared)
+        self.run_backtest_simulation()
 
         self.generate_outputs()
 

@@ -375,6 +375,7 @@ class TemporalGraphNetwork(nn.Module):
 
         if return_embeddings:
             outputs["embeddings"] = node_embeddings
+            outputs["pool_attention"] = attn_weights.squeeze(-1)  # [num_nodes]
 
         return outputs
 

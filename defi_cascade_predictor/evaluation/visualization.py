@@ -572,42 +572,129 @@ class PaperVisualizer:
         plt.close(fig)
         logger.info(f"Saved backtest plot to {filename}")
 
-    def plot_temporal_robustness(
+    def plot_event_generalization(
         self,
-        robustness_data: dict,
+        event_data: dict,
         horizons: list[int],
-        filename: str = "temporal_robustness.pdf",
+        filename: str = "event_generalization.pdf",
     ):
-        """Grouped bar chart of AUROC across temporal windows."""
-        fig, ax = plt.subplots(figsize=(6, 4))
+        """Bar chart showing peak predictions for events the model was
+        never trained on (leave-one-event-out)."""
         horizon_labels = {24: "1d", 72: "3d", 168: "7d", 720: "30d"}
-        windows = list(robustness_data.keys())
-        n_windows = len(windows)
-        x = np.arange(len(horizons))
-        bar_w = 0.8 / max(n_windows, 1)
-        colors = ["#2196F3", "#4CAF50", "#FF9800"]
+        events = list(event_data.keys())
+        if not events:
+            return
+        n_events = len(events)
+        n_horizons = len(horizons)
 
-        for i, window_name in enumerate(windows):
-            metrics = robustness_data[window_name]
-            vals = [metrics.get(f"cascade_{h}h", {}).get("auroc", 0) for h in horizons]
-            offset = (i - n_windows / 2 + 0.5) * bar_w
-            bars = ax.bar(x + offset, vals, bar_w, label=window_name.title(),
+        fig, ax = plt.subplots(figsize=(max(8, n_events * 1.2), 4.5))
+        x = np.arange(n_events)
+        bar_w = 0.8 / max(n_horizons, 1)
+        colors = ["#2196F3", "#4CAF50", "#FF9800", "#9C27B0"]
+
+        for i, h in enumerate(horizons):
+            key = f"cascade_{h}h"
+            vals = [event_data[e].get(key, {}).get("peak_prediction", 0) for e in events]
+            offset = (i - n_horizons / 2 + 0.5) * bar_w
+            bars = ax.bar(x + offset, vals, bar_w,
+                         label=horizon_labels.get(h, f"{h}h"),
                          color=colors[i % len(colors)], alpha=0.85)
             for bar, val in zip(bars, vals):
                 if val > 0:
                     ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                            f"{val:.3f}", ha="center", va="bottom", fontsize=7)
+                            f"{val:.2f}", ha="center", va="bottom", fontsize=6)
 
+        ax.axhline(y=0.5, color="red", linestyle="--", alpha=0.5, label="Threshold 0.5")
+        ax.axhline(y=0.3, color="orange", linestyle="--", alpha=0.5, label="Threshold 0.3")
+
+        event_labels = [e.replace("_", " ").title() for e in events]
         ax.set_xticks(x)
-        ax.set_xticklabels([horizon_labels.get(h, f"{h}h") for h in horizons])
-        ax.set_xlabel("Prediction Horizon")
-        ax.set_ylabel("AUROC")
-        ax.set_title("Temporal Robustness: AUROC Across Time Windows")
-        ax.legend(framealpha=0.9)
-        ax.set_ylim([0, 1.1])
-        fig.savefig(self.output_dir / filename)
+        ax.set_xticklabels(event_labels, rotation=25, ha="right", fontsize=8)
+        ax.set_ylabel("Peak Prediction (Unseen Event)")
+        ax.set_title("Leave-One-Event-Out: Can TGN Detect Events It Was Never Trained On?")
+        ax.legend(fontsize=7, ncol=3, loc="upper right")
+        ax.set_ylim([0, 1.05])
+        fig.tight_layout()
+        fig.savefig(self.output_dir / filename, bbox_inches="tight")
         plt.close(fig)
-        logger.info(f"Saved temporal robustness plot to {filename}")
+        logger.info(f"Saved event generalization plot to {filename}")
+
+    def plot_cascade_pathways(
+        self,
+        pathway_data: dict,
+        protocols: list[str],
+        filename: str = "cascade_pathways.pdf",
+    ):
+        """Heatmap showing per-protocol risk elevation during cascade events.
+
+        Rows = cascade events, Columns = protocols.
+        Color = risk elevation (during - pre event).
+        Annotations show early warning protocols.
+        """
+        events = list(pathway_data.keys())
+        if not events:
+            logger.warning("No cascade pathway data to plot")
+            return
+
+        n_events = len(events)
+        n_protos = len(protocols)
+
+        # Build risk elevation matrix
+        elevation_matrix = np.zeros((n_events, n_protos))
+        early_warn_matrix = np.zeros((n_events, n_protos))
+
+        for i, event_name in enumerate(events):
+            pa = pathway_data[event_name]["protocol_analysis"]
+            for j, proto in enumerate(protocols):
+                if proto in pa:
+                    elevation_matrix[i, j] = pa[proto]["risk_elevation"]
+                    early_warn_matrix[i, j] = pa[proto]["early_warning_elevation"]
+
+        # Shorten protocol names for display
+        short_names = [p.replace("-v", "V").replace("_", " ")[:12] for p in protocols]
+        event_labels = [e.replace("_", " ").title() for e in events]
+
+        # Two subplots: risk elevation + early warning
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, max(3, n_events * 0.8)))
+
+        # Risk elevation heatmap
+        im1 = ax1.imshow(elevation_matrix, cmap="YlOrRd", aspect="auto")
+        ax1.set_xticks(range(n_protos))
+        ax1.set_xticklabels(short_names, rotation=45, ha="right", fontsize=7)
+        ax1.set_yticks(range(n_events))
+        ax1.set_yticklabels(event_labels, fontsize=8)
+        ax1.set_title("Risk Elevation During Cascade", fontsize=10)
+        plt.colorbar(im1, ax=ax1, shrink=0.8, label="Risk Change")
+
+        # Annotate top 3 per event
+        for i in range(n_events):
+            top3 = np.argsort(elevation_matrix[i])[-3:]
+            for j in top3:
+                if elevation_matrix[i, j] > 0.01:
+                    ax1.text(j, i, f"{elevation_matrix[i, j]:.2f}",
+                            ha="center", va="center", fontsize=6, fontweight="bold")
+
+        # Early warning heatmap
+        im2 = ax2.imshow(early_warn_matrix, cmap="PuBu", aspect="auto")
+        ax2.set_xticks(range(n_protos))
+        ax2.set_xticklabels(short_names, rotation=45, ha="right", fontsize=7)
+        ax2.set_yticks(range(n_events))
+        ax2.set_yticklabels(event_labels, fontsize=8)
+        ax2.set_title("Early Warning Signal (5-7d Before)", fontsize=10)
+        plt.colorbar(im2, ax=ax2, shrink=0.8, label="Risk Elevation")
+
+        for i in range(n_events):
+            top3 = np.argsort(early_warn_matrix[i])[-3:]
+            for j in top3:
+                if early_warn_matrix[i, j] > 0.01:
+                    ax2.text(j, i, f"{early_warn_matrix[i, j]:.2f}",
+                            ha="center", va="center", fontsize=6, fontweight="bold")
+
+        fig.suptitle("Cascade Propagation Pathway Analysis", fontsize=12, y=1.02)
+        fig.tight_layout()
+        fig.savefig(self.output_dir / filename, bbox_inches="tight")
+        plt.close(fig)
+        logger.info(f"Saved cascade pathway plot to {filename}")
 
     def generate_all_paper_figures(
         self,

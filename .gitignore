@@ -1,14 +1,27 @@
+# Python artifacts
 __pycache__/
 *.pyc
 *.pyo
-.DS_Store
 *.egg-info/
 dist/
 build/
+
+# Environment and secrets
 .env
 *.log
-outputs/
-defi_cascade_predictor/outputs/
-defi_cascade_predictor/data/real/
-*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
 .ipynb_checkpoints/
+
+# Runtime data (not tracked)
+defi_cascade_predictor/data/real/
+
+# Archives
+*.zip
+
+# Paper (private)
+paper/

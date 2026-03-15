@@ -134,7 +134,7 @@ model:
     embedding_dim: 128
     num_attention_heads: 4
     num_gnn_layers: 2
-    dropout: 0.2
+    dropout: 0.15
     memory_updater: "gru"  # "gru" or "rnn"
     message_aggregator: "last"  # "mean" or "last"
     embedding_module: "graph_attention"  # "graph_attention", "graph_sum", "identity"
@@ -173,7 +173,7 @@ model:
 training:
   batch_size: 64
   learning_rate: 0.0003
-  weight_decay: 0.0005
+  weight_decay: 0.0002
   epochs: 300
   patience: 35  # early stopping
   num_folds: 5  # for cross-validation

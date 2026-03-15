@@ -1,0 +1,71 @@
+13:00:48 | INFO    | QUICK MODE: reduced epochs & simulations
+13:00:48 | INFO    | ============================================================
+13:00:48 | INFO    | DeFi Liquidation Cascade Predictor
+13:00:48 | INFO    | Temporal GNN on Cross-Protocol Composability Graphs
+13:00:48 | INFO    | Target: IEEE Trans. Computational Social Systems
+13:00:48 | INFO    | ============================================================
+13:01:26 | INFO    | ======================================================================
+13:01:26 | INFO    | DeFi LIQUIDATION CASCADE PREDICTOR — FULL PIPELINE
+13:01:26 | INFO    | Device: cpu
+13:01:26 | INFO    | ======================================================================
+13:01:26 | INFO    | ============================================================
+13:01:26 | INFO    | PHASE 1: SYNTHETIC DATA GENERATION
+13:01:26 | INFO    | ============================================================
+13:01:26 | INFO    | Generating synthetic dataset with cascade signal...
+13:01:26 | INFO    | CascadeLabeler initialized with 10 known events
+13:01:27 | INFO    | Generated 1491 days, 15 protocols, cascade rate 24h=0.049
+13:01:27 | INFO    | ============================================================
+13:01:27 | INFO    | PHASE 2: GRAPH CONSTRUCTION + FEATURES
+13:01:27 | INFO    | ============================================================
+13:01:27 | INFO    | GraphConstructor initialized: 15 protocols, 6 edge types
+13:01:27 | INFO    | Total features per node: 46
+13:01:27 | INFO    | Static edges built: {'shared_collateral': 20, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 18}
+13:01:35 | INFO    | Feature matrix: (1491, 15, 46) (46 features per node)
+13:01:35 | INFO    | ============================================================
+13:01:35 | INFO    | PHASE 3: DATA PREPARATION
+13:01:35 | INFO    | ============================================================
+13:01:35 | INFO    | Split: train=0:1043, val=1043:1267, test=1267:1491
+13:01:35 | INFO    |   train cascade_1h positive rate: 0.0412
+13:01:35 | INFO    |   train cascade_6h positive rate: 0.0412
+13:01:35 | INFO    |   train cascade_24h positive rate: 0.0460
+13:01:35 | INFO    |   train cascade_168h positive rate: 0.0748
+13:01:35 | INFO    |   val cascade_1h positive rate: 0.0179
+13:01:35 | INFO    |   val cascade_6h positive rate: 0.0179
+13:01:35 | INFO    |   val cascade_24h positive rate: 0.0223
+13:01:35 | INFO    |   val cascade_168h positive rate: 0.0491
+13:01:35 | INFO    |   test cascade_1h positive rate: 0.0759
+13:01:35 | INFO    |   test cascade_6h positive rate: 0.0759
+13:01:35 | INFO    |   test cascade_24h positive rate: 0.0893
+13:01:35 | INFO    |   test cascade_168h positive rate: 0.1696
+13:01:35 | INFO    | ============================================================
+13:01:35 | INFO    | PHASE 4: TGN TRAINING
+13:01:35 | INFO    | ============================================================
+13:01:36 | INFO    | TGN params: 1,398,087
+13:02:33 | INFO    | Epoch 1/20 | Train: 0.21793 | Val: 0.40509 | NoImprove: 0/8
+13:54:14 | INFO    | Epoch 10/20 | Train: 0.09642 | Val: 0.14862 | NoImprove: 4/8
+13:57:43 | INFO    | Early stopping at epoch 14
+13:57:43 | INFO    | ============================================================
+13:57:43 | INFO    | PHASE 5: BASELINE TRAINING
+13:57:43 | INFO    | ============================================================
+13:57:43 | INFO    | Training XGBoost...
+13:57:44 | INFO    | Training XGBoost for cascade_1h (pos_rate: 0.0424)
+13:57:46 | INFO    |   Best iteration: N/A
+13:57:46 | INFO    | Training XGBoost for cascade_6h (pos_rate: 0.0424)
+13:57:47 | INFO    |   Best iteration: N/A
+13:57:47 | INFO    | Training XGBoost for cascade_24h (pos_rate: 0.0474)
+13:57:49 | INFO    |   Best iteration: N/A
+13:57:49 | INFO    | Training XGBoost for cascade_168h (pos_rate: 0.0770)
+13:57:51 | INFO    |   Best iteration: N/A
+13:57:51 | INFO    |   XGBoost trained successfully
+13:57:51 | INFO    | Training Centrality baseline...
+13:57:51 | INFO    | Centrality metrics computed
+13:57:52 | INFO    | Training centrality model for cascade_1h
+13:57:52 | INFO    | Training centrality model for cascade_6h
+13:57:52 | INFO    | Training centrality model for cascade_24h
+13:57:52 | INFO    | Training centrality model for cascade_168h
+13:57:52 | INFO    |   Centrality trained successfully
+13:57:52 | INFO    | Preparing SIR baseline...
+13:57:52 | INFO    |   SIR initialized (analytical baseline)
+13:57:52 | INFO    | Training Static GNN...
+14:28:45 | INFO    |   Static GNN trained
+14:28:45 | INFO    | Training LSTM...

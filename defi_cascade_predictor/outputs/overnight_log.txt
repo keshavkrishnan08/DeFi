@@ -1,0 +1,472 @@
+2026-03-09 23:02:24.084 | INFO     | experiments.run_experiments:load_all:97 - Loading real TVL data from /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/data/real/tvl_combined.csv
+2026-03-09 23:02:24.208 | INFO     | experiments.run_experiments:load_all:108 - Study period: 2021-06-01 to 2026-02-28 (1734 days)
+2026-03-09 23:02:24.210 | INFO     | experiments.run_experiments:load_all:118 -   aave-v3: first data at day 286 (2022-03-14)
+2026-03-09 23:02:24.211 | INFO     | experiments.run_experiments:load_all:118 -   aave-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.212 | INFO     | experiments.run_experiments:load_all:118 -   compound-v3: first data at day 452 (2022-08-27)
+2026-03-09 23:02:24.212 | INFO     | experiments.run_experiments:load_all:118 -   compound-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.213 | INFO     | experiments.run_experiments:load_all:118 -   makerdao: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.214 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v3: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.214 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.215 | INFO     | experiments.run_experiments:load_all:118 -   curve-dex: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.216 | INFO     | experiments.run_experiments:load_all:118 -   lido: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.217 | INFO     | experiments.run_experiments:load_all:118 -   rocket-pool: first data at day 123 (2021-10-02)
+2026-03-09 23:02:24.218 | INFO     | experiments.run_experiments:load_all:118 -   convex-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.219 | INFO     | experiments.run_experiments:load_all:118 -   yearn-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.219 | INFO     | experiments.run_experiments:load_all:118 -   frax: first data at day 470 (2022-09-14)
+2026-03-09 23:02:24.220 | INFO     | experiments.run_experiments:load_all:118 -   balancer: first data at day 0 (2021-06-01)
+2026-03-09 23:02:24.221 | INFO     | experiments.run_experiments:load_all:118 -   morpho: first data at day 957 (2024-01-14)
+2026-03-09 23:02:25.733 | INFO     | data.collectors.cascade_labeler:__init__:34 - CascadeLabeler initialized with 6 known events
+2026-03-09 23:02:25.921 | INFO     | data.collectors.cascade_labeler:detect_tvl_anomalies:146 - Detected 10 potential cascade events from TVL data
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_2
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_20
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_22
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_26
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_28
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_36
+2026-03-09 23:02:25.922 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_40
+2026-03-09 23:02:31.439 | INFO     | experiments.run_experiments:load_all:146 -   cascade_24h positive rate: 0.0813
+2026-03-09 23:02:31.440 | INFO     | experiments.run_experiments:load_all:146 -   cascade_72h positive rate: 0.0940
+2026-03-09 23:02:31.441 | INFO     | experiments.run_experiments:load_all:146 -   cascade_168h positive rate: 0.1194
+2026-03-09 23:02:31.441 | INFO     | experiments.run_experiments:load_all:146 -   cascade_720h positive rate: 0.2503
+2026-03-09 23:02:31.441 | INFO     | experiments.run_experiments:load_all:147 -   Total events (known + detected): 13
+2026-03-09 23:02:31.746 | WARNING  | experiments.run_experiments:__init__:370 - CUDA unavailable, using CPU
+2026-03-09 23:02:31.774 | INFO     | experiments.run_experiments:build_graph_and_features:413 - ============================================================
+2026-03-09 23:02:31.774 | INFO     | experiments.run_experiments:build_graph_and_features:414 - PHASE 2: GRAPH CONSTRUCTION + FEATURES
+2026-03-09 23:02:31.774 | INFO     | experiments.run_experiments:build_graph_and_features:415 - ============================================================
+2026-03-09 23:02:31.774 | INFO     | data.processing.graph_constructor:__init__:95 - GraphConstructor initialized: 15 protocols, 6 edge types
+2026-03-09 23:02:31.774 | INFO     | data.processing.feature_engineer:_build_feature_list:71 - Total features per node: 46
+2026-03-09 23:02:31.775 | INFO     | data.processing.graph_constructor:build_static_edges:175 - Static edges built: {'shared_collateral': 30, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 24}
+2026-03-09 23:02:43.044 | INFO     | experiments.run_experiments:build_graph_and_features:521 - Feature matrix: (1734, 15, 46) (46 features per node)
+2026-03-09 23:02:43.050 | INFO     | experiments.run_experiments:build_graph_and_features:537 - Normalization: computed on training split [:518] (518/1734 timesteps)
+2026-03-09 23:02:43.103 | INFO     | experiments.run_experiments:prepare_data:562 - ============================================================
+2026-03-09 23:02:43.103 | INFO     | experiments.run_experiments:prepare_data:563 - PHASE 3: DATA PREPARATION
+2026-03-09 23:02:43.103 | INFO     | experiments.run_experiments:prepare_data:564 - ============================================================
+2026-03-09 23:02:43.676 | INFO     | experiments.run_experiments:prepare_data:597 - Temporal augmentation: 46 -> 322 features/node (window=30, channels=7)
+2026-03-09 23:02:43.764 | INFO     | experiments.run_experiments:prepare_data:638 - Split: train=0:518, val=518:669, test=669:1734
+2026-03-09 23:02:43.799 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_24h positive rate: 0.0772
+2026-03-09 23:02:43.799 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_72h positive rate: 0.0888
+2026-03-09 23:02:43.800 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_168h positive rate: 0.1158
+2026-03-09 23:02:43.801 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_720h positive rate: 0.2876
+2026-03-09 23:02:43.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_24h positive rate: 0.1192
+2026-03-09 23:02:43.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_72h positive rate: 0.1457
+2026-03-09 23:02:43.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_168h positive rate: 0.1854
+2026-03-09 23:02:43.803 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_720h positive rate: 0.3377
+2026-03-09 23:02:43.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_24h positive rate: 0.0779
+2026-03-09 23:02:43.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_72h positive rate: 0.0892
+2026-03-09 23:02:43.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_168h positive rate: 0.1117
+2026-03-09 23:02:43.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_720h positive rate: 0.2197
+2026-03-09 23:02:43.804 | INFO     | experiments.run_experiments:load_all:97 - Loading real TVL data from /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/data/real/tvl_combined.csv
+2026-03-09 23:02:43.830 | INFO     | experiments.run_experiments:load_all:108 - Study period: 2021-06-01 to 2026-02-28 (1734 days)
+2026-03-09 23:02:43.831 | INFO     | experiments.run_experiments:load_all:118 -   aave-v3: first data at day 286 (2022-03-14)
+2026-03-09 23:02:43.831 | INFO     | experiments.run_experiments:load_all:118 -   aave-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.834 | INFO     | experiments.run_experiments:load_all:118 -   compound-v3: first data at day 452 (2022-08-27)
+2026-03-09 23:02:43.834 | INFO     | experiments.run_experiments:load_all:118 -   compound-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.835 | INFO     | experiments.run_experiments:load_all:118 -   makerdao: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.835 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v3: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.836 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.836 | INFO     | experiments.run_experiments:load_all:118 -   curve-dex: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.836 | INFO     | experiments.run_experiments:load_all:118 -   lido: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.837 | INFO     | experiments.run_experiments:load_all:118 -   rocket-pool: first data at day 123 (2021-10-02)
+2026-03-09 23:02:43.837 | INFO     | experiments.run_experiments:load_all:118 -   convex-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.838 | INFO     | experiments.run_experiments:load_all:118 -   yearn-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.838 | INFO     | experiments.run_experiments:load_all:118 -   frax: first data at day 470 (2022-09-14)
+2026-03-09 23:02:43.839 | INFO     | experiments.run_experiments:load_all:118 -   balancer: first data at day 0 (2021-06-01)
+2026-03-09 23:02:43.840 | INFO     | experiments.run_experiments:load_all:118 -   morpho: first data at day 957 (2024-01-14)
+2026-03-09 23:02:45.653 | INFO     | data.collectors.cascade_labeler:__init__:34 - CascadeLabeler initialized with 6 known events
+2026-03-09 23:02:45.783 | INFO     | data.collectors.cascade_labeler:detect_tvl_anomalies:146 - Detected 10 potential cascade events from TVL data
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_2
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_20
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_22
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_26
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_28
+2026-03-09 23:02:45.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_36
+2026-03-09 23:02:45.785 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_40
+2026-03-09 23:02:51.052 | INFO     | experiments.run_experiments:load_all:146 -   cascade_24h positive rate: 0.0813
+2026-03-09 23:02:51.052 | INFO     | experiments.run_experiments:load_all:146 -   cascade_72h positive rate: 0.0940
+2026-03-09 23:02:51.053 | INFO     | experiments.run_experiments:load_all:146 -   cascade_168h positive rate: 0.1194
+2026-03-09 23:02:51.054 | INFO     | experiments.run_experiments:load_all:146 -   cascade_720h positive rate: 0.2503
+2026-03-09 23:02:51.054 | INFO     | experiments.run_experiments:load_all:147 -   Total events (known + detected): 13
+2026-03-09 23:02:51.093 | WARNING  | experiments.run_experiments:__init__:370 - CUDA unavailable, using CPU
+2026-03-09 23:02:51.094 | INFO     | experiments.run_experiments:build_graph_and_features:413 - ============================================================
+2026-03-09 23:02:51.094 | INFO     | experiments.run_experiments:build_graph_and_features:414 - PHASE 2: GRAPH CONSTRUCTION + FEATURES
+2026-03-09 23:02:51.094 | INFO     | experiments.run_experiments:build_graph_and_features:415 - ============================================================
+2026-03-09 23:02:51.094 | INFO     | data.processing.graph_constructor:__init__:95 - GraphConstructor initialized: 15 protocols, 6 edge types
+2026-03-09 23:02:51.094 | INFO     | data.processing.feature_engineer:_build_feature_list:71 - Total features per node: 46
+2026-03-09 23:02:51.095 | INFO     | data.processing.graph_constructor:build_static_edges:175 - Static edges built: {'shared_collateral': 30, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 24}
+2026-03-09 23:03:03.067 | INFO     | experiments.run_experiments:build_graph_and_features:521 - Feature matrix: (1734, 15, 46) (46 features per node)
+2026-03-09 23:03:03.070 | INFO     | experiments.run_experiments:build_graph_and_features:537 - Normalization: computed on training split [:518] (518/1734 timesteps)
+2026-03-09 23:03:03.127 | INFO     | experiments.run_experiments:prepare_data:562 - ============================================================
+2026-03-09 23:03:03.127 | INFO     | experiments.run_experiments:prepare_data:563 - PHASE 3: DATA PREPARATION
+2026-03-09 23:03:03.127 | INFO     | experiments.run_experiments:prepare_data:564 - ============================================================
+2026-03-09 23:03:03.668 | INFO     | experiments.run_experiments:prepare_data:597 - Temporal augmentation: 8 -> 56 features/node (window=30, channels=7)
+2026-03-09 23:03:03.693 | INFO     | experiments.run_experiments:prepare_data:638 - Split: train=0:518, val=518:669, test=669:1734
+2026-03-09 23:03:03.695 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_24h positive rate: 0.0772
+2026-03-09 23:03:03.695 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_72h positive rate: 0.0888
+2026-03-09 23:03:03.695 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_168h positive rate: 0.1158
+2026-03-09 23:03:03.696 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_720h positive rate: 0.2876
+2026-03-09 23:03:03.696 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_24h positive rate: 0.1192
+2026-03-09 23:03:03.696 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_72h positive rate: 0.1457
+2026-03-09 23:03:03.696 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_168h positive rate: 0.1854
+2026-03-09 23:03:03.697 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_720h positive rate: 0.3377
+2026-03-09 23:03:03.698 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_24h positive rate: 0.0779
+2026-03-09 23:03:03.698 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_72h positive rate: 0.0892
+2026-03-09 23:03:03.699 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_168h positive rate: 0.1117
+2026-03-09 23:03:03.699 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_720h positive rate: 0.2197
+2026-03-09 23:33:19.873 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_24h (pos_rate: 0.0820)
+2026-03-09 23:33:33.348 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:33:33.348 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_72h (pos_rate: 0.0943)
+2026-03-09 23:33:47.691 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:33:47.692 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_168h (pos_rate: 0.1230)
+2026-03-09 23:34:03.087 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:03.087 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_720h (pos_rate: 0.3053)
+2026-03-09 23:34:18.702 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:19.761 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_24h (pos_rate: 0.0820)
+2026-03-09 23:34:22.654 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:22.655 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_72h (pos_rate: 0.0943)
+2026-03-09 23:34:25.414 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:25.415 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_168h (pos_rate: 0.1230)
+2026-03-09 23:34:28.403 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:28.404 | INFO     | models.baselines.xgboost_model:fit:123 - Training XGBoost for cascade_720h (pos_rate: 0.3053)
+2026-03-09 23:34:30.926 | INFO     | models.baselines.xgboost_model:fit:147 -   Best iteration: N/A
+2026-03-09 23:34:30.995 | INFO     | experiments.run_experiments:load_all:97 - Loading real TVL data from /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/data/real/tvl_combined.csv
+2026-03-09 23:34:31.041 | INFO     | experiments.run_experiments:load_all:108 - Study period: 2021-06-01 to 2026-02-28 (1734 days)
+2026-03-09 23:34:31.042 | INFO     | experiments.run_experiments:load_all:118 -   aave-v3: first data at day 286 (2022-03-14)
+2026-03-09 23:34:31.042 | INFO     | experiments.run_experiments:load_all:118 -   aave-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.042 | INFO     | experiments.run_experiments:load_all:118 -   compound-v3: first data at day 452 (2022-08-27)
+2026-03-09 23:34:31.042 | INFO     | experiments.run_experiments:load_all:118 -   compound-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.043 | INFO     | experiments.run_experiments:load_all:118 -   makerdao: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.043 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v3: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.043 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v2: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.043 | INFO     | experiments.run_experiments:load_all:118 -   curve-dex: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.044 | INFO     | experiments.run_experiments:load_all:118 -   lido: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.044 | INFO     | experiments.run_experiments:load_all:118 -   rocket-pool: first data at day 123 (2021-10-02)
+2026-03-09 23:34:31.044 | INFO     | experiments.run_experiments:load_all:118 -   convex-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.044 | INFO     | experiments.run_experiments:load_all:118 -   yearn-finance: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.044 | INFO     | experiments.run_experiments:load_all:118 -   frax: first data at day 470 (2022-09-14)
+2026-03-09 23:34:31.045 | INFO     | experiments.run_experiments:load_all:118 -   balancer: first data at day 0 (2021-06-01)
+2026-03-09 23:34:31.045 | INFO     | experiments.run_experiments:load_all:118 -   morpho: first data at day 957 (2024-01-14)
+2026-03-09 23:34:31.844 | INFO     | data.collectors.cascade_labeler:__init__:34 - CascadeLabeler initialized with 6 known events
+2026-03-09 23:34:31.907 | INFO     | data.collectors.cascade_labeler:detect_tvl_anomalies:146 - Detected 10 potential cascade events from TVL data
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_2
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_20
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_22
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_26
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_28
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_36
+2026-03-09 23:34:31.908 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_40
+2026-03-09 23:34:33.889 | INFO     | experiments.run_experiments:load_all:146 -   cascade_24h positive rate: 0.0813
+2026-03-09 23:34:33.890 | INFO     | experiments.run_experiments:load_all:146 -   cascade_72h positive rate: 0.0940
+2026-03-09 23:34:33.890 | INFO     | experiments.run_experiments:load_all:146 -   cascade_168h positive rate: 0.1194
+2026-03-09 23:34:33.890 | INFO     | experiments.run_experiments:load_all:146 -   cascade_720h positive rate: 0.2503
+2026-03-09 23:34:33.890 | INFO     | experiments.run_experiments:load_all:147 -   Total events (known + detected): 13
+2026-03-09 23:34:33.913 | WARNING  | experiments.run_experiments:__init__:370 - CUDA unavailable, using CPU
+2026-03-09 23:34:33.914 | INFO     | experiments.run_experiments:build_graph_and_features:413 - ============================================================
+2026-03-09 23:34:33.914 | INFO     | experiments.run_experiments:build_graph_and_features:414 - PHASE 2: GRAPH CONSTRUCTION + FEATURES
+2026-03-09 23:34:33.914 | INFO     | experiments.run_experiments:build_graph_and_features:415 - ============================================================
+2026-03-09 23:34:33.914 | INFO     | data.processing.graph_constructor:__init__:95 - GraphConstructor initialized: 15 protocols, 6 edge types
+2026-03-09 23:34:33.914 | INFO     | data.processing.feature_engineer:_build_feature_list:71 - Total features per node: 46
+2026-03-09 23:34:33.914 | INFO     | data.processing.graph_constructor:build_static_edges:175 - Static edges built: {'shared_collateral': 30, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 24}
+2026-03-09 23:34:39.921 | INFO     | experiments.run_experiments:build_graph_and_features:521 - Feature matrix: (1734, 15, 46) (46 features per node)
+2026-03-09 23:34:39.923 | INFO     | experiments.run_experiments:build_graph_and_features:537 - Normalization: computed on training split [:518] (518/1734 timesteps)
+2026-03-09 23:34:39.956 | INFO     | experiments.run_experiments:prepare_data:562 - ============================================================
+2026-03-09 23:34:39.957 | INFO     | experiments.run_experiments:prepare_data:563 - PHASE 3: DATA PREPARATION
+2026-03-09 23:34:39.957 | INFO     | experiments.run_experiments:prepare_data:564 - ============================================================
+2026-03-09 23:34:40.180 | INFO     | experiments.run_experiments:prepare_data:597 - Temporal augmentation: 46 -> 322 features/node (window=30, channels=7)
+2026-03-09 23:34:40.199 | INFO     | experiments.run_experiments:prepare_data:638 - Split: train=0:518, val=518:669, test=669:1734
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_24h positive rate: 0.0772
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_72h positive rate: 0.0888
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_168h positive rate: 0.1158
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_720h positive rate: 0.2876
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_24h positive rate: 0.1192
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_72h positive rate: 0.1457
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_168h positive rate: 0.1854
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_720h positive rate: 0.3377
+2026-03-09 23:34:40.200 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_24h positive rate: 0.0779
+2026-03-09 23:34:40.201 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_72h positive rate: 0.0892
+2026-03-09 23:34:40.201 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_168h positive rate: 0.1117
+2026-03-09 23:34:40.201 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_720h positive rate: 0.2197
+2026-03-10 00:45:34.478 | INFO     | experiments.run_experiments:load_all:97 - Loading real TVL data from /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/data/real/tvl_combined.csv
+2026-03-10 00:45:34.518 | INFO     | experiments.run_experiments:load_all:108 - Study period: 2021-06-01 to 2026-02-28 (1734 days)
+2026-03-10 00:45:34.519 | INFO     | experiments.run_experiments:load_all:118 -   aave-v3: first data at day 286 (2022-03-14)
+2026-03-10 00:45:34.519 | INFO     | experiments.run_experiments:load_all:118 -   aave-v2: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.520 | INFO     | experiments.run_experiments:load_all:118 -   compound-v3: first data at day 452 (2022-08-27)
+2026-03-10 00:45:34.520 | INFO     | experiments.run_experiments:load_all:118 -   compound-v2: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.520 | INFO     | experiments.run_experiments:load_all:118 -   makerdao: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.520 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v3: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.520 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v2: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.521 | INFO     | experiments.run_experiments:load_all:118 -   curve-dex: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.521 | INFO     | experiments.run_experiments:load_all:118 -   lido: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.521 | INFO     | experiments.run_experiments:load_all:118 -   rocket-pool: first data at day 123 (2021-10-02)
+2026-03-10 00:45:34.522 | INFO     | experiments.run_experiments:load_all:118 -   convex-finance: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.522 | INFO     | experiments.run_experiments:load_all:118 -   yearn-finance: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.522 | INFO     | experiments.run_experiments:load_all:118 -   frax: first data at day 470 (2022-09-14)
+2026-03-10 00:45:34.522 | INFO     | experiments.run_experiments:load_all:118 -   balancer: first data at day 0 (2021-06-01)
+2026-03-10 00:45:34.522 | INFO     | experiments.run_experiments:load_all:118 -   morpho: first data at day 957 (2024-01-14)
+2026-03-10 00:45:35.334 | INFO     | data.collectors.cascade_labeler:__init__:34 - CascadeLabeler initialized with 6 known events
+2026-03-10 00:45:35.395 | INFO     | data.collectors.cascade_labeler:detect_tvl_anomalies:146 - Detected 10 potential cascade events from TVL data
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_2
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_20
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_22
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_26
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_28
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_36
+2026-03-10 00:45:35.396 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_40
+2026-03-10 00:45:37.336 | INFO     | experiments.run_experiments:load_all:146 -   cascade_24h positive rate: 0.0813
+2026-03-10 00:45:37.336 | INFO     | experiments.run_experiments:load_all:146 -   cascade_72h positive rate: 0.0940
+2026-03-10 00:45:37.336 | INFO     | experiments.run_experiments:load_all:146 -   cascade_168h positive rate: 0.1194
+2026-03-10 00:45:37.337 | INFO     | experiments.run_experiments:load_all:146 -   cascade_720h positive rate: 0.2503
+2026-03-10 00:45:37.337 | INFO     | experiments.run_experiments:load_all:147 -   Total events (known + detected): 13
+2026-03-10 00:45:37.359 | WARNING  | experiments.run_experiments:__init__:370 - CUDA unavailable, using CPU
+2026-03-10 00:45:37.361 | INFO     | experiments.run_experiments:build_graph_and_features:413 - ============================================================
+2026-03-10 00:45:37.361 | INFO     | experiments.run_experiments:build_graph_and_features:414 - PHASE 2: GRAPH CONSTRUCTION + FEATURES
+2026-03-10 00:45:37.361 | INFO     | experiments.run_experiments:build_graph_and_features:415 - ============================================================
+2026-03-10 00:45:37.361 | INFO     | data.processing.graph_constructor:__init__:95 - GraphConstructor initialized: 15 protocols, 6 edge types
+2026-03-10 00:45:37.361 | INFO     | data.processing.feature_engineer:_build_feature_list:71 - Total features per node: 46
+2026-03-10 00:45:37.361 | INFO     | data.processing.graph_constructor:build_static_edges:175 - Static edges built: {'shared_collateral': 30, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 24}
+2026-03-10 00:45:43.347 | INFO     | experiments.run_experiments:build_graph_and_features:521 - Feature matrix: (1734, 15, 46) (46 features per node)
+2026-03-10 00:45:43.348 | INFO     | experiments.run_experiments:build_graph_and_features:537 - Normalization: computed on training split [:518] (518/1734 timesteps)
+2026-03-10 00:45:43.383 | INFO     | experiments.run_experiments:prepare_data:562 - ============================================================
+2026-03-10 00:45:43.383 | INFO     | experiments.run_experiments:prepare_data:563 - PHASE 3: DATA PREPARATION
+2026-03-10 00:45:43.383 | INFO     | experiments.run_experiments:prepare_data:564 - ============================================================
+2026-03-10 00:45:43.596 | INFO     | experiments.run_experiments:prepare_data:597 - Temporal augmentation: 46 -> 322 features/node (window=30, channels=7)
+2026-03-10 00:45:43.616 | INFO     | experiments.run_experiments:prepare_data:638 - Split: train=0:518, val=518:669, test=669:1734
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_24h positive rate: 0.0772
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_72h positive rate: 0.0888
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_168h positive rate: 0.1158
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_720h positive rate: 0.2876
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_24h positive rate: 0.1192
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_72h positive rate: 0.1457
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_168h positive rate: 0.1854
+2026-03-10 00:45:43.617 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_720h positive rate: 0.3377
+2026-03-10 00:45:43.618 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_24h positive rate: 0.0779
+2026-03-10 00:45:43.618 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_72h positive rate: 0.0892
+2026-03-10 00:45:43.618 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_168h positive rate: 0.1117
+2026-03-10 00:45:43.618 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_720h positive rate: 0.2197
+2026-03-10 01:33:01.910 | INFO     | experiments.run_experiments:load_all:97 - Loading real TVL data from /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/data/real/tvl_combined.csv
+2026-03-10 01:33:01.930 | INFO     | experiments.run_experiments:load_all:108 - Study period: 2021-06-01 to 2026-02-28 (1734 days)
+2026-03-10 01:33:01.930 | INFO     | experiments.run_experiments:load_all:118 -   aave-v3: first data at day 286 (2022-03-14)
+2026-03-10 01:33:01.931 | INFO     | experiments.run_experiments:load_all:118 -   aave-v2: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.931 | INFO     | experiments.run_experiments:load_all:118 -   compound-v3: first data at day 452 (2022-08-27)
+2026-03-10 01:33:01.932 | INFO     | experiments.run_experiments:load_all:118 -   compound-v2: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.932 | INFO     | experiments.run_experiments:load_all:118 -   makerdao: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.932 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v3: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.932 | INFO     | experiments.run_experiments:load_all:118 -   uniswap-v2: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.933 | INFO     | experiments.run_experiments:load_all:118 -   curve-dex: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.933 | INFO     | experiments.run_experiments:load_all:118 -   lido: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.933 | INFO     | experiments.run_experiments:load_all:118 -   rocket-pool: first data at day 123 (2021-10-02)
+2026-03-10 01:33:01.933 | INFO     | experiments.run_experiments:load_all:118 -   convex-finance: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.934 | INFO     | experiments.run_experiments:load_all:118 -   yearn-finance: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.934 | INFO     | experiments.run_experiments:load_all:118 -   frax: first data at day 470 (2022-09-14)
+2026-03-10 01:33:01.934 | INFO     | experiments.run_experiments:load_all:118 -   balancer: first data at day 0 (2021-06-01)
+2026-03-10 01:33:01.934 | INFO     | experiments.run_experiments:load_all:118 -   morpho: first data at day 957 (2024-01-14)
+2026-03-10 01:33:02.728 | INFO     | data.collectors.cascade_labeler:__init__:34 - CascadeLabeler initialized with 6 known events
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:detect_tvl_anomalies:146 - Detected 10 potential cascade events from TVL data
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_2
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_20
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_22
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_26
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_28
+2026-03-10 01:33:02.784 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_36
+2026-03-10 01:33:02.785 | INFO     | data.collectors.cascade_labeler:create_multi_horizon_labels:205 - Added detected event: detected_anomaly_40
+2026-03-10 01:33:04.715 | INFO     | experiments.run_experiments:load_all:146 -   cascade_24h positive rate: 0.0813
+2026-03-10 01:33:04.716 | INFO     | experiments.run_experiments:load_all:146 -   cascade_72h positive rate: 0.0940
+2026-03-10 01:33:04.716 | INFO     | experiments.run_experiments:load_all:146 -   cascade_168h positive rate: 0.1194
+2026-03-10 01:33:04.716 | INFO     | experiments.run_experiments:load_all:146 -   cascade_720h positive rate: 0.2503
+2026-03-10 01:33:04.716 | INFO     | experiments.run_experiments:load_all:147 -   Total events (known + detected): 13
+2026-03-10 01:33:04.738 | WARNING  | experiments.run_experiments:__init__:370 - CUDA unavailable, using CPU
+2026-03-10 01:33:04.739 | INFO     | experiments.run_experiments:build_graph_and_features:413 - ============================================================
+2026-03-10 01:33:04.739 | INFO     | experiments.run_experiments:build_graph_and_features:414 - PHASE 2: GRAPH CONSTRUCTION + FEATURES
+2026-03-10 01:33:04.739 | INFO     | experiments.run_experiments:build_graph_and_features:415 - ============================================================
+2026-03-10 01:33:04.739 | INFO     | data.processing.graph_constructor:__init__:95 - GraphConstructor initialized: 15 protocols, 6 edge types
+2026-03-10 01:33:04.739 | INFO     | data.processing.feature_engineer:_build_feature_list:71 - Total features per node: 46
+2026-03-10 01:33:04.739 | INFO     | data.processing.graph_constructor:build_static_edges:175 - Static edges built: {'shared_collateral': 30, 'liquidity_flow': 20, 'oracle_dependency': 34, 'governance_overlap': 14, 'liquidation_pathway': 24}
+2026-03-10 01:33:10.538 | INFO     | experiments.run_experiments:build_graph_and_features:521 - Feature matrix: (1734, 15, 46) (46 features per node)
+2026-03-10 01:33:10.539 | INFO     | experiments.run_experiments:build_graph_and_features:537 - Normalization: computed on training split [:518] (518/1734 timesteps)
+2026-03-10 01:33:10.574 | INFO     | experiments.run_experiments:prepare_data:562 - ============================================================
+2026-03-10 01:33:10.575 | INFO     | experiments.run_experiments:prepare_data:563 - PHASE 3: DATA PREPARATION
+2026-03-10 01:33:10.575 | INFO     | experiments.run_experiments:prepare_data:564 - ============================================================
+2026-03-10 01:33:10.784 | INFO     | experiments.run_experiments:prepare_data:597 - Temporal augmentation: 46 -> 322 features/node (window=30, channels=7)
+2026-03-10 01:33:10.801 | INFO     | experiments.run_experiments:prepare_data:638 - Split: train=0:518, val=518:669, test=669:1734
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_24h positive rate: 0.0772
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_72h positive rate: 0.0888
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_168h positive rate: 0.1158
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   train cascade_720h positive rate: 0.2876
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_24h positive rate: 0.1192
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_72h positive rate: 0.1457
+2026-03-10 01:33:10.802 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_168h positive rate: 0.1854
+2026-03-10 01:33:10.803 | INFO     | experiments.run_experiments:prepare_data:646 -   val cascade_720h positive rate: 0.3377
+2026-03-10 01:33:10.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_24h positive rate: 0.0779
+2026-03-10 01:33:10.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_72h positive rate: 0.0892
+2026-03-10 01:33:10.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_168h positive rate: 0.1117
+2026-03-10 01:33:10.803 | INFO     | experiments.run_experiments:prepare_data:646 -   test cascade_720h positive rate: 0.2197
+======================================================================
+OVERNIGHT EXPERIMENTS — Addressing 5 Reviewer Vulnerabilities
+Device: cpu | Max epochs: 60 | Seeds: [42, 123, 456, 789, 1337]
+Started: 2026-03-09 23:02:24
+======================================================================
+
+======================================================================
+EXPERIMENT 1: TVL-Only Ablation (addresses derived-feature circularity)
+======================================================================
+
+  Loading full features...
+  Full feature dim: 322
+
+  Loading TVL-only features...
+  TVL-only feature dim: 56
+
+  Training TGN (all features)...
+    Epoch 10/60 val=0.1740 no_improve=0
+    Epoch 20/60 val=0.3959 no_improve=3
+    Epoch 30/60 val=0.4370 no_improve=13
+    Early stop at epoch 35
+  TGN (all 46)                 0.818/0.587 0.810/0.603 0.793/0.631 0.707/0.560
+
+  Training TGN (TVL-only 8)...
+    Epoch 10/60 val=0.3388 no_improve=9
+    Early stop at epoch 19
+  TGN (TVL-only 8)             0.912/0.470 0.228/0.056 0.848/0.485 0.707/0.471
+
+  Training XGBoost (all features)...
+  XGBoost (all 46)             0.927/0.564 0.851/0.416 0.786/0.234 0.613/0.292
+
+  Training XGBoost (TVL-only 8)...
+  XGBoost (TVL-only 8)         0.871/0.428 0.784/0.177 0.713/0.181 0.599/0.245
+
+  --- KEY FINDING ---
+  1d: TGN TVL-only AUPRC=0.470 vs XGBoost TVL-only AUPRC=0.428 (TGN wins by 0.042)
+  3d: TGN TVL-only AUPRC=0.056 vs XGBoost TVL-only AUPRC=0.177 (XGBoost wins by 0.121)
+  7d: TGN TVL-only AUPRC=0.485 vs XGBoost TVL-only AUPRC=0.181 (TGN wins by 0.305)
+  30d: TGN TVL-only AUPRC=0.471 vs XGBoost TVL-only AUPRC=0.245 (TGN wins by 0.226)
+
+======================================================================
+EXPERIMENT 2: 5-Seed TGN Ensemble (addresses variance + AUROC gap)
+======================================================================
+
+  Training TGN seed=42...
+    Epoch 10/60 val=0.1740 no_improve=0
+    Epoch 20/60 val=0.3959 no_improve=3
+    Epoch 30/60 val=0.4370 no_improve=13
+    Early stop at epoch 35
+  Seed 42                      0.818/0.587 0.810/0.603 0.793/0.631 0.707/0.560
+
+  Training TGN seed=123...
+    Epoch 10/60 val=0.5344 no_improve=1
+    Epoch 20/60 val=0.4409 no_improve=6
+    Epoch 30/60 val=0.5084 no_improve=16
+    Early stop at epoch 32
+  Seed 123                     0.816/0.577 0.809/0.589 0.792/0.641 0.726/0.662
+
+  Training TGN seed=456...
+    Epoch 10/60 val=0.4496 no_improve=9
+    Epoch 20/60 val=0.8475 no_improve=5
+    Epoch 30/60 val=0.7361 no_improve=15
+    Early stop at epoch 33
+  Seed 456                     0.866/0.642 0.855/0.635 0.814/0.653 0.720/0.596
+
+  Training TGN seed=789...
+    Epoch 10/60 val=0.5231 no_improve=9
+    Epoch 20/60 val=0.3717 no_improve=6
+    Epoch 30/60 val=0.6429 no_improve=16
+    Early stop at epoch 32
+  Seed 789                     0.938/0.711 0.927/0.685 0.899/0.673 0.769/0.578
+
+  Training TGN seed=1337...
+    Epoch 10/60 val=0.2411 no_improve=9
+    Epoch 20/60 val=0.5303 no_improve=7
+    Epoch 30/60 val=0.5972 no_improve=17
+    Early stop at epoch 31
+  Seed 1337                    0.808/0.406 0.798/0.420 0.796/0.497 0.705/0.592
+
+  --- ENSEMBLE RESULTS ---
+  TGN Ensemble (5 seeds)       0.877/0.647 0.849/0.628 0.821/0.661 0.731/0.646
+  cascade_24h: AUROC mean=0.849±0.049, AUPRC mean=0.585±0.101
+    Ensemble: AUROC=0.877, AUPRC=0.647
+  cascade_72h: AUROC mean=0.840±0.048, AUPRC mean=0.586±0.090
+    Ensemble: AUROC=0.849, AUPRC=0.628
+  cascade_168h: AUROC mean=0.819±0.041, AUPRC mean=0.619±0.063
+    Ensemble: AUROC=0.821, AUPRC=0.661
+  cascade_720h: AUROC mean=0.725±0.023, AUPRC mean=0.598±0.035
+    Ensemble: AUROC=0.731, AUPRC=0.646
+
+======================================================================
+EXPERIMENT 3: Graph Structure Ablation (addresses small-graph concern)
+======================================================================
+
+  Training TGN (real graph)...
+    Epoch 10/60 val=0.1740 no_improve=0
+    Epoch 20/60 val=0.3959 no_improve=3
+    Epoch 30/60 val=0.4370 no_improve=13
+    Early stop at epoch 35
+  Real composability graph     0.818/0.587 0.810/0.603 0.793/0.631 0.707/0.560
+
+  Training TGN (random graph)...
+    Epoch 10/60 val=0.3766 no_improve=2
+    Epoch 20/60 val=0.2946 no_improve=8
+    Epoch 30/60 val=0.4741 no_improve=18
+    Early stop at epoch 30
+  Random graph                 0.842/0.586 0.830/0.574 0.814/0.638 0.739/0.664
+
+  Training TGN (complete graph)...
+    Epoch 10/60 val=0.3828 no_improve=1
+    Epoch 20/60 val=0.1546 no_improve=0
+    Epoch 30/60 val=0.2779 no_improve=7
+    Epoch 40/60 val=0.3858 no_improve=17
+    Early stop at epoch 41
+  Complete graph               0.846/0.552 0.833/0.535 0.815/0.559 0.723/0.530
+
+  --- KEY FINDING ---
+  1d: Real=0.587 vs Random=0.586 vs Complete=0.552
+    -> Real graph WINS (structure matters)
+  3d: Real=0.603 vs Random=0.574 vs Complete=0.535
+    -> Real graph WINS (structure matters)
+  7d: Real=0.631 vs Random=0.638 vs Complete=0.559
+  30d: Real=0.560 vs Random=0.664 vs Complete=0.530
+
+======================================================================
+EXPERIMENT 4: Leave-One-Event-Out (addresses single-test-event concern)
+======================================================================
+  Training on modified label sets where one crisis is removed,
+  then testing if TGN still detects the held-out event.
+
+  --- Holding out: Terra/Luna ---
+  Training TGN without Terra/Luna labels...
+    Epoch 10/50 val=0.3211 no_improve=1
+    Epoch 20/50 val=0.6724 no_improve=6
+    Early stop at epoch 29
+  TGN (no Terra/Luna)          0.889/0.664 0.893/0.676 0.905/0.736 0.570/0.227
+
+  --- Holding out: 3AC/Celsius ---
+  Training TGN without 3AC/Celsius labels...
+    Epoch 10/50 val=0.6239 no_improve=9
+    Early stop at epoch 16
+  TGN (no 3AC/Celsius)         0.663/0.130 0.650/0.124 0.192/0.066 0.736/0.466
+
+  --- Holding out: FTX ---
+  Training TGN without FTX labels...
+    Epoch 10/50 val=0.3838 no_improve=9
+    Early stop at epoch 16
+  TGN (no FTX)                 0.732/0.252 0.623/0.114 0.227/0.068 0.740/0.466
+
+  Training TGN (all events, baseline)...
+    Epoch 10/50 val=0.1740 no_improve=0
+    Epoch 20/50 val=0.3959 no_improve=3
+    Epoch 30/50 val=0.4370 no_improve=13
+    Early stop at epoch 32
+  TGN (all events)             0.818/0.587 0.810/0.603 0.793/0.631 0.707/0.560
+
+  --- KEY FINDING ---
+  If removing one event barely changes test metrics, model generalizes.
+  Terra/Luna removed, 1d: AUPRC 0.664 (baseline 0.587, delta +0.077)
+  Terra/Luna removed, 3d: AUPRC 0.676 (baseline 0.603, delta +0.073)
+  3AC/Celsius removed, 1d: AUPRC 0.130 (baseline 0.587, delta -0.457)
+  3AC/Celsius removed, 3d: AUPRC 0.124 (baseline 0.603, delta -0.479)
+  FTX removed, 1d: AUPRC 0.252 (baseline 0.587, delta -0.334)
+  FTX removed, 3d: AUPRC 0.114 (baseline 0.603, delta -0.489)
+
+======================================================================
+ALL EXPERIMENTS COMPLETE in 3.1 hours
+Finished: 2026-03-10 02:07:51
+======================================================================
+
+Results saved to /Users/keshavkrishnan/2IEEEPAPER/defi_cascade_predictor/outputs/overnight_results.json
